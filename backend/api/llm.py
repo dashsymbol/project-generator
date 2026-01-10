@@ -126,15 +126,25 @@ class LLMService:
         
         # 1. Generate Client
         client_data = self._call_gemini(
-            system_prompt="You are an expert creative director. Generate a detailed fictitious client profile based on the user's context. Ensure diversity in industry and needs.",
-            user_prompt=f"Category: {category}\nContext: {json.dumps(answers)}",
+            system_prompt=(
+                "You are an expert creative director. Generate a detailed fictitious client profile. "
+                "CRITICAL: You MUST use the 'User Questionnaire Answers' below to tailor this profile. "
+                "The user's input dictates the specific needs, industry, and preferences of this client. "
+                "Do not ignore their specific text inputs."
+            ),
+            user_prompt=f"Category: {category}\n\nUSER QUESTIONNAIRE ANSWERS:\n{json.dumps(answers, indent=2)}",
             schema=CLIENT_SCHEMA
         )
 
         # 2. Generate Project
         project_data = self._call_gemini(
-            system_prompt="You are an expert project manager. Create a detailed creative brief for the following client. Be specific with deliverables and scope.",
-            user_prompt=f"Category: {category}\nClient Profile: {json.dumps(client_data)}\nContext: {json.dumps(answers)}",
+            system_prompt=(
+                "You are an expert project manager. Create a detailed creative brief for the following client. "
+                "CRITICAL: The 'User Questionnaire Answers' are the MOST IMPORTANT source of truth. "
+                "If the user specified constraints, preferences, or details in their answers, you MUST incorporate them into the brief. "
+                "Be specific with deliverables and scope based on their input."
+            ),
+            user_prompt=f"Category: {category}\n\nClient Profile: {json.dumps(client_data)}\n\nUSER QUESTIONNAIRE ANSWERS:\n{json.dumps(answers, indent=2)}",
             schema=PROJECT_SCHEMA
         )
         

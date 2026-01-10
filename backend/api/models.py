@@ -29,6 +29,8 @@ class Project(models.Model):
         DELIVERED = 'DELIVERED', 'Delivered'
         APPROVED = 'APPROVED', 'Approved'
         REJECTED = 'REJECTED', 'Rejected'
+        GENERATING = 'GENERATING', 'Generating'
+        FAILED = 'FAILED', 'Failed'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     client = models.ForeignKey(Client, on_delete=models.CASCADE, related_name='projects', db_index=True)

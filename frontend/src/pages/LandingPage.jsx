@@ -6,11 +6,18 @@ export default function LandingPage() {
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
+    const loadProjects = () => {
         api.getProjects()
             .then((res) => setProjects(res.data))
             .catch((err) => console.error(err))
             .finally(() => setLoading(false));
+    };
+
+    useEffect(() => {
+        loadProjects();
+        // Optional: poll every 10s to update statuses on dashboard too
+        const interval = setInterval(loadProjects, 10000);
+        return () => clearInterval(interval);
     }, []);
 
     return (
@@ -57,20 +64,37 @@ export default function LandingPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {projects.map((p) => (
-                                <tr key={p.id} style={{ borderBottom: "1px solid #f1f3f5" }}>
-                                    <td style={{ padding: "16px 8px" }}>
-                                        <Link to={`/projects/${p.id}`} style={{ color: "#0d6efd", textDecoration: "none", fontWeight: 500 }}>
-                                            {p.title}
-                                        </Link>
-                                    </td>
-                                    <td style={{ padding: "16px 8px", color: "#495057" }}>
-                                        <span style={{ background: "#e9ecef", padding: "4px 8px", borderRadius: 4, fontSize: 12 }}>{p.category}</span>
-                                    </td>
-                                    <td style={{ padding: "16px 8px", color: "#212529" }}>{p.client ? p.client.name : "N/A"}</td>
-                                    <td style={{ padding: "16px 8px", color: "#868e96", fontSize: 14 }}>{new Date(p.created_at).toLocaleDateString()}</td>
-                                </tr>
-                            ))}
+                            {projects.map((p) => {
+                                const isGenerating = p.status === 'GENERATING';
+                                return (
+                                    <tr key={p.id} style={{ borderBottom: "1px solid #f1f3f5" }}>
+                                        <td style={{ padding: "16px 8px" }}>
+                                            <Link to={`/projects/${p.id}`} style={{ color: "#0d6efd", textDecoration: "none", fontWeight: 500, display: "flex", alignItems: "center", gap: 8 }}>
+                                                {p.title}
+                                                {isGenerating && (
+                                                    <span style={{
+                                                        background: "#fff3cd",
+                                                        color: "#856404",
+                                                        padding: "2px 6px",
+                                                        borderRadius: 4,
+                                                        fontSize: 10,
+                                                        border: "1px solid #ffeeba",
+                                                        fontWeight: "bold",
+                                                        textTransform: "uppercase"
+                                                    }}>
+                                                        Generating...
+                                                    </span>
+                                                )}
+                                            </Link>
+                                        </td>
+                                        <td style={{ padding: "16px 8px", color: "#495057" }}>
+                                            <span style={{ background: "#e9ecef", padding: "4px 8px", borderRadius: 4, fontSize: 12 }}>{p.category}</span>
+                                        </td>
+                                        <td style={{ padding: "16px 8px", color: "#212529" }}>{p.client ? p.client.name : "N/A"}</td>
+                                        <td style={{ padding: "16px 8px", color: "#868e96", fontSize: 14 }}>{new Date(p.created_at).toLocaleDateString()}</td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 )}

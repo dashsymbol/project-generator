@@ -32,24 +32,75 @@ export default function ProjectDetailPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
-    useEffect(() => {
+    const fetchProject = () => {
         api.getProject(id)
-            .then((res) => setProjects(res.data)) // typo in original code? No, original had setProject. Wait.
-        // Copilot might have autocompleted wrong.
-        // In read file: "api.getProject(id).then((res) => setProject(res.data))"
-        // I'll fix it here.
-    }, [id]);
+            .then((res) => {
+                setProject(res.data);
+                if (res.data.status !== 'GENERATING') {
+                    setLoading(false);
+                }
+            })
+            .catch((err) => {
+                console.error(err);
+                setError("Failed to load project");
+                setLoading(false);
+            });
+    };
 
     useEffect(() => {
-        api.getProject(id)
-            .then((res) => setProject(res.data))
-            .catch((err) => setError("Failed to load project"))
-            .finally(() => setLoading(false));
-    }, [id]);
+        fetchProject();
+        // Polling logic
+        const interval = setInterval(() => {
+            if (project && project.status === 'GENERATING') {
+                fetchProject();
+            }
+        }, 3000); // Poll every 3 seconds
 
-    if (loading) return <div style={{ padding: 40, textAlign: "center", color: "#6c757d" }}>Loading project details...</div>;
+        return () => clearInterval(interval);
+    }, [id, project?.status]); // Re-run effect if status changes to stop polling if done
+
+    if (loading && (!project || project.status === 'GENERATING')) {
+        return (
+            <div style={{
+                padding: 60,
+                textAlign: "center",
+                color: "#495057",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                minHeight: "50vh"
+            }}>
+                <div style={{ fontSize: 24, marginBottom: 16 }}>✨ Generating your project details...</div>
+                <div style={{ color: "#868e96" }}>This usually takes about 10-20 seconds with the AI model.</div>
+                {/* Simple CSS Spinner */}
+                <div style={{
+                    marginTop: 30,
+                    width: 40,
+                    height: 40,
+                    border: "4px solid #e9ecef",
+                    borderTop: "4px solid #0d6efd",
+                    borderRadius: "50%",
+                    animation: "spin 1s linear infinite"
+                }}>
+                    <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+                </div>
+            </div>
+        );
+    }
+
     if (error) return <div style={{ padding: 40, textAlign: "center", color: "#dc3545" }}>Error: {error}</div>;
     if (!project) return <div style={{ padding: 40, textAlign: "center" }}>Project not found</div>;
+
+    if (project.status === 'FAILED') {
+        return (
+            <div style={{ padding: 40, textAlign: "center", color: "#dc3545" }}>
+                <h2>Generation Failed</h2>
+                <p>Something went wrong with the AI generation. Please try again later.</p>
+                <Link to="/" style={{ color: "#0d6efd", textDecoration: "underline" }}>Back to Dashboard</Link>
+            </div>
+        );
+    }
 
     const { client } = project;
 

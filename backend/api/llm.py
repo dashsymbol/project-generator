@@ -1,34 +1,72 @@
 import os
 import json
 import logging
+import time
 import google.generativeai as genai
+from google.api_core.exceptions import ResourceExhausted, InternalServerError, ServiceUnavailable
 from django.conf import settings
 
-# Schemas for Structured Output
-
+# Updated Schemas matching new Models (Kept same as before)
 CLIENT_SCHEMA = {
     "type": "OBJECT",
     "properties": {
         "name": {"type": "STRING"},
+        "client_type": {"type": "STRING"},
+        "industry": {"type": "STRING"},
         "summary": {"type": "STRING"},
+        "what_they_do": {"type": "STRING"},
         "target_audience": {"type": "STRING"},
-        "primary_problem": {"type": "STRING"},
+        "primary_need": {"type": "STRING"},
+        "preferences": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"}
+        },
+        "dislikes": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"}
+        },
+        "communication_style": {"type": "STRING"},
+        "decision_style": {"type": "STRING"},
         "constraints": {
             "type": "ARRAY",
             "items": {"type": "STRING"}
         },
-        "brand_voice": {"type": "STRING"},
         "success_definition": {"type": "STRING"}
     },
-    "required": ["name", "summary", "target_audience", "primary_problem", "constraints"]
+    "required": ["name", "industry", "summary", "primary_need", "success_definition"]
 }
 
 PROJECT_SCHEMA = {
     "type": "OBJECT",
     "properties": {
         "title": {"type": "STRING"},
+        "category": {"type": "STRING"},
+        "subcategory": {"type": "STRING"},
         "objective": {"type": "STRING"},
-        "problem_statement": {"type": "STRING"},
+        "basic_details": {"type": "STRING"},
+        "client_criteria": {
+            "type": "OBJECT",
+            "properties": {
+                "technical": {"type": "ARRAY", "items": {"type": "STRING"}},
+                "business": {"type": "ARRAY", "items": {"type": "STRING"}}
+            }
+        },
+        "requirements": {
+            "type": "OBJECT",
+            "properties": {
+                "must_include": {"type": "ARRAY", "items": {"type": "STRING"}},
+                "must_avoid": {"type": "ARRAY", "items": {"type": "STRING"}}
+            },
+            "required": ["must_include", "must_avoid"]
+        },
+        "resources_provided": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"}
+        },
+        "resources_excluded": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"}
+        },
         "deliverables": {
             "type": "ARRAY",
             "items": {
@@ -42,33 +80,28 @@ PROJECT_SCHEMA = {
                 "required": ["name", "format", "quantity"]
             }
         },
-        "requirements": {
-            "type": "OBJECT",
-            "properties": {
-                "must_include": {"type": "ARRAY", "items": {"type": "STRING"}},
-                "must_avoid": {"type": "ARRAY", "items": {"type": "STRING"}}
-            },
-            "required": ["must_include", "must_avoid"]
+        "evaluation_criteria_creative": {
+             "type": "ARRAY",
+             "items": {"type": "STRING"}
         },
-        "evaluation_criteria": {
-            "type": "ARRAY",
-            "items": {
-                "type": "OBJECT",
-                "properties": {
-                    "criterion": {"type": "STRING"},
-                    "description": {"type": "STRING"},
-                    "weight": {"type": "NUMBER"},
-                    "pass_threshold": {"type": "NUMBER"}
-                },
-                "required": ["criterion", "description", "weight", "pass_threshold"]
-            }
+        "evaluation_criteria_technical": {
+             "type": "ARRAY",
+             "items": {"type": "STRING"}
         },
         "tone_rules": {
             "type": "ARRAY",
             "items": {"type": "STRING"}
+        },
+        "scope_included": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"}
+        },
+        "scope_excluded": {
+            "type": "ARRAY",
+            "items": {"type": "STRING"}
         }
     },
-    "required": ["title", "objective", "problem_statement", "deliverables", "requirements", "evaluation_criteria", "tone_rules"]
+    "required": ["title", "objective", "basic_details", "deliverables", "requirements", "scope_included"]
 }
 
 logger = logging.getLogger('api')
@@ -79,15 +112,13 @@ class LLMService:
         if self.api_key:
             genai.configure(api_key=self.api_key)
             self.model = genai.GenerativeModel(
-                'gemini-2.5-flash',
-                generation_config={"response_mime_type": "application/json"}
+                'gemma-3-27b-it'
             )
         else:
             self.model = None
 
     def generate_project(self, category, answers):
         if not self.model:
-            # Fallback to stub if no key provided
             logger.warning("No GEMINI_API_KEY found, using stub.")
             return self._generate_stub(category, answers)
 
@@ -95,70 +126,111 @@ class LLMService:
         
         # 1. Generate Client
         client_data = self._call_gemini(
-            system_prompt="You are an expert creative director. Generate a fictitious client profile based on the user's context.",
+            system_prompt="You are an expert creative director. Generate a detailed fictitious client profile based on the user's context. Ensure diversity in industry and needs.",
             user_prompt=f"Category: {category}\nContext: {json.dumps(answers)}",
             schema=CLIENT_SCHEMA
         )
 
         # 2. Generate Project
         project_data = self._call_gemini(
-            system_prompt="You are an expert project manager. Create a detailed creative brief for the following client.",
+            system_prompt="You are an expert project manager. Create a detailed creative brief for the following client. Be specific with deliverables and scope.",
             user_prompt=f"Category: {category}\nClient Profile: {json.dumps(client_data)}\nContext: {json.dumps(answers)}",
             schema=PROJECT_SCHEMA
         )
         
-        # Add metadata back
         project_data["category"] = category
         project_data["source_answers"] = answers
+        project_data["status"] = "DRAFT"
 
         return client_data, project_data
 
-    def _call_gemini(self, system_prompt, user_prompt, schema):
-        # Combining system and user prompt as older Gemini versions or specific integrations might prefer it, 
-        # but 1.5 Flash supports system instructions. We'll use a combined prompt for simplicity/robustness if needed,
-        # but here we can try the direct generation with schema enforcement.
+    def _call_gemini(self, system_prompt, user_prompt, schema, max_retries=3):
+        # Gemma-3-27b-it does NOT support native JSON mode / constrained decoding via API yet (Error 400).
+        # We must prompt for JSON and parse it manually.
         
-        # Update generation config with the specific schema for this call
-        generation_config = genai.GenerationConfig(
-            response_mime_type="application/json",
-            response_schema=schema
+        # Convert schema to string for prompt inclusion
+        schema_json = json.dumps(schema, indent=2)
+        
+        # Enhanced prompt for JSON adherence
+        full_prompt = (
+            f"{system_prompt}\n\n"
+            f"STRICT OUTPUT INSTRUCTION: You must output strictly valid JSON matching the following schema:\n"
+            f"{schema_json}\n\n"
+            f"Do not output markdown formatting like ```json ... ```. Just the raw JSON string.\n\n"
+            f"USER REQUEST:\n{user_prompt}"
         )
-
-        full_prompt = f"{system_prompt}\n\n{user_prompt}"
         
-        try:
-            response = self.model.generate_content(
-                full_prompt,
-                generation_config=generation_config
-            )
-            
-            logger.debug(f"Gemini response: {response.text}")
-            return json.loads(response.text)
-            
-        except Exception as e:
-            logger.error("Gemini generation failed", exc_info=True)
-            raise
+        # No JSON enforcement in config for Gemma-3
+        generation_config = genai.GenerationConfig()
+
+        delay = 5  # Initial delay
+        
+        for attempt in range(max_retries):
+            try:
+                response = self.model.generate_content(
+                    full_prompt,
+                    generation_config=generation_config
+                )
+                text = response.text
+                
+                # Cleanup potential markdown code blocks
+                lines = text.splitlines()
+                if lines and lines[0].strip().startswith("```"):
+                   lines = lines[1:]
+                if lines and lines[-1].strip().startswith("```"):
+                   lines = lines[:-1]
+                text = "\n".join(lines).strip()
+                
+                # Cleanup simpler markdown if splitlines didn't catch it (e.g. inline)
+                if text.startswith("```json"): text = text[7:]
+                elif text.startswith("```"): text = text[3:]
+                if text.endswith("```"): text = text[:-3]
+                text = text.strip()
+
+                logger.debug(f"Gemini response: {text}")
+                return json.loads(text)
+                
+            except json.JSONDecodeError as e:
+                logger.warning(f"JSON Decode Error (attempt {attempt + 1}/{max_retries}): {e}. Retrying...")
+                # Could add a "fix it" prompt here, but for now simple retry or fail
+                time.sleep(delay)
+                
+            except ResourceExhausted as e:
+                logger.warning(f"Quota exceeded (attempt {attempt + 1}/{max_retries}). Waiting {delay}s...")
+                time.sleep(delay)
+                delay *= 2
+                if delay > 60: delay = 60
+                
+            except (InternalServerError, ServiceUnavailable) as e:
+                 logger.warning(f"Service error ({e}) (attempt {attempt + 1}/{max_retries}). Retrying in {delay}s...")
+                 time.sleep(delay)
+                 delay *= 2
+
+            except Exception as e:
+                logger.error("Gemini generation failed with non-retriable error", exc_info=True)
+                raise
+        
+        raise Exception("Max retries exceeded for Gemini generation")
+        
+        raise Exception("Max retries exceeded for Gemini generation")
 
     def _generate_stub(self, category, answers):
         client_data = {
-            "name": "Acme Stub Corp (No Gemini Key)",
-            "summary": "This is a stub because GEMINI_API_KEY is missing.",
-            "target_audience": "Developers",
-            "primary_problem": "Missing credentials",
-            "constraints": ["Configure .env"],
-            "brand_voice": "Robotic",
-            "success_definition": "Key added"
+            "name": "Acme Stub Corp",
+            "industry": "Tech",
+            "summary": "Stubbed client.",
+            "primary_need": "Testing",
+            "success_definition": "It works"
         }
         
         project_data = {
             "title": f"Stub Project for {category}",
             "category": category,
-            "objective": "Verify API Key configuration",
-            "problem_statement": "The system fallback was triggered.",
+            "objective": "Verify API",
+            "basic_details": "N/A",
             "deliverables": [],
             "requirements": {"must_include": [], "must_avoid": []},
-            "evaluation_criteria": [],
-            "tone_rules": [],
+            "scope_included": [],
             "source_answers": answers
         }
         return client_data, project_data

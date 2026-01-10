@@ -75,4 +75,3 @@ coverage.xml
 .pytest_cache/
 
 # User specific (preserved)
-docs/

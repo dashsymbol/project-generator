@@ -14,42 +14,67 @@ export default function LandingPage() {
     }, []);
 
     return (
-        <div style={{ padding: 24, fontFamily: "system-ui", maxWidth: 800, margin: "0 auto" }}>
-            <h1>Creative Projects</h1>
-            <div style={{ marginBottom: 20 }}>
-                <Link to="/create">
-                    <button style={{ padding: "10px 20px", fontSize: 16, cursor: "pointer" }}>Create New Project</button>
-                </Link>
-            </div>
+        <div style={{
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+            background: "#f8f9fa",
+            minHeight: "100vh",
+            padding: "40px 20px"
+        }}>
+            <div style={{ maxWidth: 800, margin: "0 auto", background: "#fff", padding: 40, borderRadius: 8, boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
+                    <h1 style={{ margin: 0, fontSize: 28, color: "#212529" }}>Creative Projects</h1>
+                    <Link to="/create">
+                        <button style={{
+                            padding: "10px 20px",
+                            fontSize: 14,
+                            fontWeight: 500,
+                            cursor: "pointer",
+                            background: "#0d6efd",
+                            color: "white",
+                            border: "none",
+                            borderRadius: 4
+                        }}>
+                            + Create New
+                        </button>
+                    </Link>
+                </div>
 
-            {loading ? (
-                <p>Loading projects...</p>
-            ) : projects.length === 0 ? (
-                <p>No projects found. Start by creating one!</p>
-            ) : (
-                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                    <thead>
-                        <tr style={{ background: "#f4f4f4" }}>
-                            <th style={{ padding: 10 }}>Title</th>
-                            <th style={{ padding: 10 }}>Category</th>
-                            <th style={{ padding: 10 }}>Client</th>
-                            <th style={{ padding: 10 }}>Created</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {projects.map((p) => (
-                            <tr key={p.id} style={{ borderBottom: "1px solid #ddd" }}>
-                                <td style={{ padding: 10 }}>
-                                    <Link to={`/projects/${p.id}`}>{p.title}</Link>
-                                </td>
-                                <td style={{ padding: 10 }}>{p.category}</td>
-                                <td style={{ padding: 10 }}>{p.client ? p.client.name : "N/A"}</td>
-                                <td style={{ padding: 10 }}>{new Date(p.created_at).toLocaleDateString()}</td>
+                {loading ? (
+                    <div style={{ textAlign: "center", color: "#6c757d", padding: 40 }}>Loading projects...</div>
+                ) : projects.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: 60, background: "#f8f9fa", borderRadius: 8, color: "#495057" }}>
+                        <p style={{ fontSize: 18, marginBottom: 16 }}>No projects found yet.</p>
+                        <p>Start by creating your first creative brief!</p>
+                    </div>
+                ) : (
+                    <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+                        <thead>
+                            <tr style={{ borderBottom: "2px solid #e9ecef" }}>
+                                <th style={{ padding: "12px 8px", color: "#495057", fontWeight: 600, fontSize: 13, textTransform: "uppercase" }}>Title</th>
+                                <th style={{ padding: "12px 8px", color: "#495057", fontWeight: 600, fontSize: 13, textTransform: "uppercase" }}>Category</th>
+                                <th style={{ padding: "12px 8px", color: "#495057", fontWeight: 600, fontSize: 13, textTransform: "uppercase" }}>Client</th>
+                                <th style={{ padding: "12px 8px", color: "#495057", fontWeight: 600, fontSize: 13, textTransform: "uppercase" }}>Created</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
-            )}
+                        </thead>
+                        <tbody>
+                            {projects.map((p) => (
+                                <tr key={p.id} style={{ borderBottom: "1px solid #f1f3f5" }}>
+                                    <td style={{ padding: "16px 8px" }}>
+                                        <Link to={`/projects/${p.id}`} style={{ color: "#0d6efd", textDecoration: "none", fontWeight: 500 }}>
+                                            {p.title}
+                                        </Link>
+                                    </td>
+                                    <td style={{ padding: "16px 8px", color: "#495057" }}>
+                                        <span style={{ background: "#e9ecef", padding: "4px 8px", borderRadius: 4, fontSize: 12 }}>{p.category}</span>
+                                    </td>
+                                    <td style={{ padding: "16px 8px", color: "#212529" }}>{p.client ? p.client.name : "N/A"}</td>
+                                    <td style={{ padding: "16px 8px", color: "#868e96", fontSize: 14 }}>{new Date(p.created_at).toLocaleDateString()}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                )}
+            </div>
         </div>
     );
 }

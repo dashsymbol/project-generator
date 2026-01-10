@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useLanguage } from "../../context/LanguageContext";
+import LanguageSwitcher from "../../components/LanguageSwitcher";
 
 export default function SignupPage() {
     const { signup } = useAuth();
+    const { t } = useLanguage();
     const navigate = useNavigate();
     const [formData, setFormData] = useState({ username: "", email: "", password: "" });
     const [error, setError] = useState("");
@@ -17,7 +20,7 @@ export default function SignupPage() {
             await signup(formData);
             navigate("/");
         } catch (err) {
-            setError(err.response?.data ? JSON.stringify(err.response.data) : "Signup failed. Please try again.");
+            setError(err.response?.data ? JSON.stringify(err.response.data) : t('common.error'));
         } finally {
             setLoading(false);
         }
@@ -32,8 +35,12 @@ export default function SignupPage() {
             background: "linear-gradient(135deg, #d1fae5 0%, #dbeafe 50%, #ede9fe 100%)",
             fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             padding: 20,
-            animation: "fadeIn 0.3s ease-in"
+            animation: "fadeIn 0.3s ease-in",
+            position: "relative"
         }}>
+            <div style={{ position: "absolute", top: 20, right: 20 }}>
+                <LanguageSwitcher />
+            </div>
             <style>{`
                 @keyframes fadeIn {
                     from { opacity: 0; }
@@ -50,8 +57,8 @@ export default function SignupPage() {
             }}>
                 <div style={{ textAlign: "center", marginBottom: 32 }}>
                     <div style={{ fontSize: 48, marginBottom: 12 }}>🚀</div>
-                    <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#111827" }}>Create Account</h2>
-                    <p style={{ color: "#6b7280", marginTop: 8, fontSize: 15 }}>Start generating personalized projects</p>
+                    <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#111827" }}>{t('auth.signup.title')}</h2>
+                    <p style={{ color: "#6b7280", marginTop: 8, fontSize: 15 }}>{t('auth.signup.subtitle')}</p>
                 </div>
 
                 {error && (
@@ -62,7 +69,7 @@ export default function SignupPage() {
 
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: 20 }}>
-                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>Username</label>
+                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>{t('auth.username')}</label>
                         <input
                             type="text"
                             style={{
@@ -80,7 +87,7 @@ export default function SignupPage() {
                         />
                     </div>
                     <div style={{ marginBottom: 20 }}>
-                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>Email</label>
+                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>{t('auth.email')}</label>
                         <input
                             type="email"
                             style={{
@@ -98,7 +105,7 @@ export default function SignupPage() {
                         />
                     </div>
                     <div style={{ marginBottom: 28 }}>
-                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>Password</label>
+                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>{t('auth.password')}</label>
                         <input
                             type="password"
                             style={{
@@ -132,12 +139,12 @@ export default function SignupPage() {
                             boxShadow: loading ? "none" : "0 4px 14px rgba(16, 185, 129, 0.4)",
                         }}
                     >
-                        {loading ? "Creating Account..." : "✨ Sign Up"}
+                        {loading ? t('common.loading') : `✨ ${t('auth.submit.signup')}`}
                     </button>
                 </form>
 
                 <div style={{ marginTop: 28, textAlign: "center", fontSize: 14, color: "#6b7280" }}>
-                    Already have an account? <Link to="/login" style={{ color: "#3b82f6", textDecoration: "none", fontWeight: 600 }}>Log in</Link>
+                    {t('auth.haveAccount')} <Link to="/login" style={{ color: "#3b82f6", textDecoration: "none", fontWeight: 600 }}>{t('auth.link.login')}</Link>
                 </div>
             </div>
         </div>

@@ -1,9 +1,12 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useLanguage } from "../../context/LanguageContext";
+import LanguageSwitcher from "../../components/LanguageSwitcher";
 
 export default function LoginPage() {
     const { login } = useAuth();
+    const { t } = useLanguage();
     const navigate = useNavigate();
     const [formData, setFormData] = useState({ username: "", password: "" });
     const [error, setError] = useState("");
@@ -17,7 +20,7 @@ export default function LoginPage() {
             await login(formData.username, formData.password);
             navigate("/");
         } catch (err) {
-            setError("Invalid credentials. Please try again.");
+            setError(t('auth.login.invalidCredentials'));
         } finally {
             setLoading(false);
         }
@@ -32,8 +35,12 @@ export default function LoginPage() {
             background: "linear-gradient(135deg, #dbeafe 0%, #ede9fe 50%, #fce7f3 100%)",
             fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
             padding: 20,
-            animation: "fadeIn 0.3s ease-in"
+            animation: "fadeIn 0.3s ease-in",
+            position: "relative"
         }}>
+            <div style={{ position: "absolute", top: 20, right: 20 }}>
+                <LanguageSwitcher />
+            </div>
             <style>{`
                 @keyframes fadeIn {
                     from { opacity: 0; }
@@ -50,8 +57,8 @@ export default function LoginPage() {
             }}>
                 <div style={{ textAlign: "center", marginBottom: 32 }}>
                     <div style={{ fontSize: 48, marginBottom: 12 }}>✨</div>
-                    <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#111827" }}>Welcome Back</h2>
-                    <p style={{ color: "#6b7280", marginTop: 8, fontSize: 15 }}>Sign in to continue to your projects</p>
+                    <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#111827" }}>{t('auth.login.title')}</h2>
+                    <p style={{ color: "#6b7280", marginTop: 8, fontSize: 15 }}>{t('auth.login.subtitle')}</p>
                 </div>
 
                 {error && (
@@ -62,7 +69,7 @@ export default function LoginPage() {
 
                 <form onSubmit={handleSubmit}>
                     <div style={{ marginBottom: 20 }}>
-                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>Username</label>
+                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>{t('auth.username')}</label>
                         <input
                             type="text"
                             style={{
@@ -81,7 +88,7 @@ export default function LoginPage() {
                         />
                     </div>
                     <div style={{ marginBottom: 28 }}>
-                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>Password</label>
+                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>{t('auth.password')}</label>
                         <input
                             type="password"
                             style={{
@@ -114,12 +121,12 @@ export default function LoginPage() {
                             boxShadow: loading ? "none" : "0 4px 14px rgba(59, 130, 246, 0.4)",
                         }}
                     >
-                        {loading ? "Signing In..." : "🚀 Sign In"}
+                        {loading ? t('common.loading') : `🚀 ${t('auth.submit.login')}`}
                     </button>
                 </form>
 
                 <div style={{ marginTop: 28, textAlign: "center", fontSize: 14, color: "#6b7280" }}>
-                    Don't have an account? <Link to="/signup" style={{ color: "#3b82f6", textDecoration: "none", fontWeight: 600 }}>Sign up</Link>
+                    {t('auth.noAccount')} <Link to="/signup" style={{ color: "#3b82f6", textDecoration: "none", fontWeight: 600 }}>{t('auth.link.signup')}</Link>
                 </div>
             </div>
         </div>

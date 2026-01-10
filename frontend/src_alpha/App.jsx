@@ -6,8 +6,9 @@ import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
 import SkillProfilePage from "./pages/SkillProfilePage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { LanguageProvider } from "./context/LanguageContext";
 
-const PrivateRoute = () => {
+const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -18,25 +19,40 @@ const PrivateRoute = () => {
     );
   }
 
-  return user ? <Outlet /> : <Navigate to="/login" />;
+  return user ? children : <Navigate to="/login" />;
 };
 
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/signup" element={<SignupPage />} />
-
-          <Route element={<PrivateRoute />}>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/profile" element={<SkillProfilePage />} />
-            <Route path="/create" element={<CreateProjectPage />} />
-            <Route path="/projects/:id" element={<ProjectDetailPage />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      <LanguageProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/profile" element={
+              <PrivateRoute>
+                <SkillProfilePage />
+              </PrivateRoute>
+            } />
+            <Route path="/" element={
+              <PrivateRoute>
+                <LandingPage />
+              </PrivateRoute>
+            } />
+            <Route path="/create-project" element={
+              <PrivateRoute>
+                <CreateProjectPage />
+              </PrivateRoute>
+            } />
+            <Route path="/project/:id" element={
+              <PrivateRoute>
+                <ProjectDetailPage />
+              </PrivateRoute>
+            } />
+          </Routes>
+        </BrowserRouter>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

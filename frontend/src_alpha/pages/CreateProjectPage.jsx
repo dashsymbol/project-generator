@@ -1,37 +1,40 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "../services/api";
-
-const PROJECT_TYPES = [
-    { value: "surprise", emoji: "🎲", label: "Surprise Me", desc: "AI picks something creative" },
-    { value: "practical", emoji: "🛠️", label: "Practical Tool", desc: "Something you can actually use" },
-    { value: "learning", emoji: "📚", label: "Learning Exercise", desc: "Focus on a new concept" },
-    { value: "portfolio", emoji: "💼", label: "Portfolio Piece", desc: "Something to show off" },
-    { value: "fun", emoji: "🎮", label: "Fun Project", desc: "Games and creative stuff" },
-];
-
-const DIFFICULTIES = [
-    { value: "BASIC", color: "#22c55e", label: "Basic", desc: "Beginner-friendly" },
-    { value: "INTERMEDIATE", color: "#f59e0b", label: "Intermediate", desc: "Some challenge" },
-    { value: "ADVANCED", color: "#ef4444", label: "Advanced", desc: "Push your limits" },
-];
-
-const TIME_OPTIONS = [
-    { value: "2", label: "2h", desc: "Quick sprint" },
-    { value: "5", label: "5h", desc: "Half day" },
-    { value: "10", label: "10h", desc: "Weekend" },
-    { value: "20", label: "20h", desc: "Week project" },
-    { value: "40", label: "40h+", desc: "Major build" },
-];
+import { useLanguage } from "../context/LanguageContext";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 
 export default function CreateProjectPage() {
     const navigate = useNavigate();
+    const { t } = useLanguage();
     const [generating, setGenerating] = useState(false);
     const [error, setError] = useState(null);
 
     const [difficulty, setDifficulty] = useState("INTERMEDIATE");
     const [timeBudget, setTimeBudget] = useState("10");
     const [projectType, setProjectType] = useState("surprise");
+
+    const PROJECT_TYPES = [
+        { value: "surprise", emoji: "🎲", label: t('create.type.surprise.label'), desc: t('create.type.surprise.desc') },
+        { value: "practical", emoji: "🛠️", label: t('create.type.practical.label'), desc: t('create.type.practical.desc') },
+        { value: "learning", emoji: "📚", label: t('create.type.learning.label'), desc: t('create.type.learning.desc') },
+        { value: "portfolio", emoji: "💼", label: t('create.type.portfolio.label'), desc: t('create.type.portfolio.desc') },
+        { value: "fun", emoji: "🎮", label: t('create.type.fun.label'), desc: t('create.type.fun.desc') },
+    ];
+
+    const DIFFICULTIES = [
+        { value: "BASIC", color: "#22c55e", label: t('create.diff.basic.label'), desc: t('create.diff.basic.desc') },
+        { value: "INTERMEDIATE", color: "#f59e0b", label: t('create.diff.intermediate.label'), desc: t('create.diff.intermediate.desc') },
+        { value: "ADVANCED", color: "#ef4444", label: t('create.diff.advanced.label'), desc: t('create.diff.advanced.desc') },
+    ];
+
+    const TIME_OPTIONS = [
+        { value: "2", label: "2h", desc: t('create.time.2h.desc') },
+        { value: "5", label: "5h", desc: t('create.time.5h.desc') },
+        { value: "10", label: "10h", desc: t('create.time.10h.desc') },
+        { value: "20", label: "20h", desc: t('create.time.20h.desc') },
+        { value: "40", label: "40h+", desc: t('create.time.40h.desc') },
+    ];
 
     useEffect(() => {
         api.getSkillProfile()
@@ -56,7 +59,7 @@ export default function CreateProjectPage() {
             setTimeout(() => navigate("/"), 5000);
         } catch (err) {
             console.error("Generation error:", err.response?.data);
-            const msg = err.response?.data?.error || JSON.stringify(err.response?.data) || "Generation failed.";
+            const msg = err.response?.data?.error || JSON.stringify(err.response?.data) || t('common.error');
             setError(msg);
             setGenerating(false);
         }
@@ -89,15 +92,18 @@ export default function CreateProjectPage() {
                 }
             `}</style>
             <div style={{ maxWidth: 560, margin: "0 auto", background: "#fff", padding: "36px 40px", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-                <Link to="/" style={{ color: "#3b82f6", textDecoration: "none", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                    ← Back to Dashboard
-                </Link>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <Link to="/" style={{ color: "#3b82f6", textDecoration: "none", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                        ← {t('common.dashboard')}
+                    </Link>
+                    <LanguageSwitcher />
+                </div>
 
-                <h1 style={{ marginTop: 16, marginBottom: 8, fontSize: 32, fontWeight: 700, color: "#111827" }}>
-                    Generate a Project ✨
+                <h1 style={{ marginTop: 0, marginBottom: 8, fontSize: 32, fontWeight: 700, color: "#111827" }}>
+                    {t('create.title')}
                 </h1>
                 <p style={{ color: "#6b7280", marginBottom: 32, fontSize: 15, lineHeight: 1.5 }}>
-                    The AI will create a unique challenge based on your skills. Just pick your preferences!
+                    {t('create.subtitle')}
                 </p>
 
                 {error && (
@@ -110,7 +116,7 @@ export default function CreateProjectPage() {
                     {/* Project Type */}
                     <div style={{ marginBottom: 28 }}>
                         <label style={{ display: "block", marginBottom: 12, fontWeight: 600, color: "#374151", fontSize: 14 }}>
-                            What kind of project?
+                            {t('create.projectType')}
                         </label>
                         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
                             {PROJECT_TYPES.slice(0, 3).map(pt => (
@@ -121,6 +127,7 @@ export default function CreateProjectPage() {
                                 >
                                     <div style={{ fontSize: 24, marginBottom: 4 }}>{pt.emoji}</div>
                                     <div style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{pt.label}</div>
+                                    <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>{pt.desc}</div>
                                 </div>
                             ))}
                         </div>
@@ -133,6 +140,7 @@ export default function CreateProjectPage() {
                                 >
                                     <div style={{ fontSize: 24, marginBottom: 4 }}>{pt.emoji}</div>
                                     <div style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{pt.label}</div>
+                                    <div style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>{pt.desc}</div>
                                 </div>
                             ))}
                         </div>
@@ -141,7 +149,7 @@ export default function CreateProjectPage() {
                     {/* Difficulty */}
                     <div style={{ marginBottom: 28 }}>
                         <label style={{ display: "block", marginBottom: 12, fontWeight: 600, color: "#374151", fontSize: 14 }}>
-                            Challenge level
+                            {t('create.difficulty')}
                         </label>
                         <div style={{ display: "flex", gap: 10 }}>
                             {DIFFICULTIES.map(d => (
@@ -165,7 +173,7 @@ export default function CreateProjectPage() {
                     {/* Time Budget */}
                     <div style={{ marginBottom: 32 }}>
                         <label style={{ display: "block", marginBottom: 12, fontWeight: 600, color: "#374151", fontSize: 14 }}>
-                            Time to invest
+                            {t('create.timeBudget')}
                         </label>
                         <div style={{ display: "flex", gap: 8 }}>
                             {TIME_OPTIONS.map(t => (
@@ -187,10 +195,10 @@ export default function CreateProjectPage() {
                     {generating ? (
                         <div style={{ padding: 32, textAlign: "center", background: "#f0f9ff", borderRadius: 12 }}>
                             <div style={{ fontSize: 18, fontWeight: 600, color: "#1e40af", marginBottom: 8 }}>
-                                ✨ Generating your project...
+                                ✨ {t('create.generating')}
                             </div>
                             <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 16 }}>
-                                The AI is crafting something just for you!
+                                {t('create.generating.subtitle')}
                             </div>
                             <div style={{
                                 width: 32,
@@ -223,7 +231,7 @@ export default function CreateProjectPage() {
                             onMouseOver={(e) => { e.target.style.transform = "translateY(-1px)"; e.target.style.boxShadow = "0 6px 20px rgba(59, 130, 246, 0.5)"; }}
                             onMouseOut={(e) => { e.target.style.transform = "translateY(0)"; e.target.style.boxShadow = "0 4px 14px rgba(59, 130, 246, 0.4)"; }}
                         >
-                            🚀 Generate My Project
+                            {t('create.generate')}
                         </button>
                     )}
                 </form>

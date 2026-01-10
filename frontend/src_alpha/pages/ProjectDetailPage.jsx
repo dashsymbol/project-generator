@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { api } from "../services/api";
+import { useLanguage } from "../context/LanguageContext";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 
 const STATUS_STYLES = {
-    GENERATING: { bg: "#fef3c7", color: "#92400e", label: "⏳ Generating" },
-    DRAFT: { bg: "#e0e7ff", color: "#3730a3", label: "📝 Draft" },
-    IN_PROGRESS: { bg: "#dbeafe", color: "#1e40af", label: "🔄 In Progress" },
-    DELIVERED: { bg: "#d1fae5", color: "#065f46", label: "✅ Delivered" },
-    FAILED: { bg: "#fee2e2", color: "#991b1b", label: "❌ Failed" },
+    GENERATING: { bg: "#fef3c7", color: "#92400e", label: "landing.status.generating" },
+    DRAFT: { bg: "#e0e7ff", color: "#3730a3", label: "landing.status.draft" },
+    IN_PROGRESS: { bg: "#dbeafe", color: "#1e40af", label: "landing.status.in_progress" },
+    DELIVERED: { bg: "#d1fae5", color: "#065f46", label: "landing.status.delivered" },
+    FAILED: { bg: "#fee2e2", color: "#991b1b", label: "landing.status.failed" },
 };
 
 const InfoSection = ({ title, children, style }) => (
@@ -26,26 +28,30 @@ const InfoSection = ({ title, children, style }) => (
     </div>
 );
 
-const TagList = ({ items, color }) => (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {items?.map((item, i) => (
-            <span key={i} style={{
-                background: color ? `${color}15` : "#f3f4f6",
-                color: color || "#374151",
-                padding: "6px 12px",
-                borderRadius: 8,
-                fontSize: 13,
-                fontWeight: 500,
-                border: `1px solid ${color ? `${color}30` : "#e5e7eb"}`
-            }}>
-                {item}
-            </span>
-        )) || <em style={{ color: "#9ca3af" }}>None</em>}
-    </div>
-);
+const TagList = ({ items, color, emptyLabel }) => {
+    const { t } = useLanguage();
+    return (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {items?.map((item, i) => (
+                <span key={i} style={{
+                    background: color ? `${color}15` : "#f3f4f6",
+                    color: color || "#374151",
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    fontSize: 13,
+                    fontWeight: 500,
+                    border: `1px solid ${color ? `${color}30` : "#e5e7eb"}`
+                }}>
+                    {item}
+                </span>
+            )) || <em style={{ color: "#9ca3af" }}>{emptyLabel || t('common.none')}</em>}
+        </div>
+    );
+};
 
 export default function ProjectDetailPage() {
     const { id } = useParams();
+    const { t } = useLanguage();
     const [project, setProject] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -60,7 +66,7 @@ export default function ProjectDetailPage() {
             })
             .catch((err) => {
                 console.error(err);
-                setError("Failed to load project");
+                setError(t('common.error'));
                 setLoading(false);
             });
     };
@@ -89,21 +95,7 @@ export default function ProjectDetailPage() {
                 <div style={{ textAlign: "center" }}>
                     <div style={{ fontSize: 48, marginBottom: 20 }}>✨</div>
                     <div style={{ fontSize: 20, fontWeight: 600, color: "#1e40af", marginBottom: 12 }}>
-                        Generating your project...
-                    </div>
-                    <div style={{ color: "#6b7280", marginBottom: 24 }}>
-                        The AI is crafting your personalized brief
-                    </div>
-                    <div style={{
-                        width: 40,
-                        height: 40,
-                        border: "4px solid #dbeafe",
-                        borderTop: "4px solid #3b82f6",
-                        borderRadius: "50%",
-                        animation: "spin 1s linear infinite",
-                        margin: "0 auto"
-                    }}>
-                        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+                        {t('create.generating')}
                     </div>
                 </div>
             </div>
@@ -114,30 +106,17 @@ export default function ProjectDetailPage() {
         return (
             <div style={{ padding: 40, textAlign: "center", color: "#dc2626" }}>
                 <div style={{ fontSize: 48, marginBottom: 16 }}>⚠️</div>
-                <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Error</div>
+                <div style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>{t('common.error')}</div>
                 <div>{error}</div>
-                <Link to="/" style={{ color: "#3b82f6", marginTop: 20, display: "inline-block" }}>← Back to Dashboard</Link>
+                <Link to="/" style={{ color: "#3b82f6", marginTop: 20, display: "inline-block" }}>← {t('common.dashboard')}</Link>
             </div>
         );
     }
 
-    if (!project) return <div style={{ padding: 40, textAlign: "center" }}>Project not found</div>;
-
-    if (project.status === 'FAILED') {
-        return (
-            <div style={{ padding: 60, textAlign: "center" }}>
-                <div style={{ fontSize: 48, marginBottom: 16 }}>❌</div>
-                <h2 style={{ color: "#dc2626", marginBottom: 8 }}>Generation Failed</h2>
-                <p style={{ color: "#6b7280" }}>Something went wrong with the AI generation. Please try again.</p>
-                <Link to="/" style={{ color: "#3b82f6", textDecoration: "none", fontWeight: 600, marginTop: 20, display: "inline-block" }}>
-                    ← Back to Dashboard
-                </Link>
-            </div>
-        );
-    }
+    if (!project) return <div style={{ padding: 40, textAlign: "center" }}>{t('project.notFound')}</div>;
 
     const { client } = project;
-    const status = STATUS_STYLES[project.status] || STATUS_STYLES.DRAFT;
+    const statusInfo = STATUS_STYLES[project.status] || STATUS_STYLES.DRAFT;
 
     return (
         <div style={{
@@ -154,17 +133,20 @@ export default function ProjectDetailPage() {
                 }
             `}</style>
             <div style={{ maxWidth: 1100, margin: "0 auto" }}>
-                <Link to="/" style={{
-                    color: "#3b82f6",
-                    textDecoration: "none",
-                    fontSize: 14,
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 4,
-                    marginBottom: 20
-                }}>
-                    ← Back to Dashboard
-                </Link>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+                    <Link to="/" style={{
+                        color: "#3b82f6",
+                        textDecoration: "none",
+                        fontSize: 14,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 4,
+                        whiteSpace: "nowrap"
+                    }}>
+                        ← {t('common.dashboard')}
+                    </Link>
+                    <LanguageSwitcher />
+                </div>
 
                 {/* Header Card */}
                 <div style={{
@@ -192,14 +174,16 @@ export default function ProjectDetailPage() {
                             </h1>
                         </div>
                         <span style={{
-                            background: status.bg,
-                            color: status.color,
+                            background: statusInfo.bg,
+                            color: statusInfo.color,
                             padding: "8px 16px",
                             borderRadius: 10,
+                            borderRadius: 10,
                             fontSize: 13,
-                            fontWeight: 600
+                            fontWeight: 600,
+                            whiteSpace: "nowrap"
                         }}>
-                            {status.label}
+                            {t(statusInfo.label)}
                         </span>
                     </div>
                 </div>
@@ -209,14 +193,14 @@ export default function ProjectDetailPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
                         {/* Project Overview */}
                         <div style={{ background: "white", padding: 32, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-                            <InfoSection title="📋 Project Overview">
+                            <InfoSection title={`📋 ${t('project.overview')}`}>
                                 <div style={{ color: "#4b5563", lineHeight: 1.7, fontSize: 15 }}>
                                     <p style={{ margin: "0 0 16px 0" }}>
-                                        <strong style={{ color: "#111827" }}>Objective:</strong> {project.objective}
+                                        <strong style={{ color: "#111827" }}>{t('project.obj')}:</strong> {project.objective}
                                     </p>
                                     {project.basic_details && (
                                         <p style={{ margin: 0 }}>
-                                            <strong style={{ color: "#111827" }}>Details:</strong> {project.basic_details}
+                                            <strong style={{ color: "#111827" }}>{t('project.details')}:</strong> {project.basic_details}
                                         </p>
                                     )}
                                 </div>
@@ -225,7 +209,7 @@ export default function ProjectDetailPage() {
 
                         {/* Scope of Work */}
                         <div style={{ background: "white", padding: 32, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-                            <InfoSection title="🎯 Scope of Work">
+                            <InfoSection title={`🎯 ${t('project.scope')}`}>
                                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
                                     <div>
                                         <h5 style={{
@@ -237,7 +221,7 @@ export default function ProjectDetailPage() {
                                             letterSpacing: 1,
                                             fontWeight: 600
                                         }}>
-                                            ✓ Included
+                                            {t('project.included')}
                                         </h5>
                                         <TagList items={project.scope_included} color="#059669" />
                                     </div>
@@ -251,7 +235,7 @@ export default function ProjectDetailPage() {
                                             letterSpacing: 1,
                                             fontWeight: 600
                                         }}>
-                                            ✗ Excluded
+                                            {t('project.excluded')}
                                         </h5>
                                         <TagList items={project.scope_excluded} color="#dc2626" />
                                     </div>
@@ -261,7 +245,7 @@ export default function ProjectDetailPage() {
 
                         {/* Deliverables */}
                         <div style={{ background: "white", padding: 32, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-                            <InfoSection title="📦 Deliverables">
+                            <InfoSection title={`📦 ${t('project.deliverables')}`}>
                                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                                     {project.deliverables?.map((d, i) => (
                                         <div key={i} style={{
@@ -280,19 +264,19 @@ export default function ProjectDetailPage() {
                                                 <span style={{ fontSize: 13, color: "#6b7280" }}>{d.format}</span>
                                             </div>
                                             <div style={{ textAlign: "right", fontSize: 13, color: "#4b5563" }}>
-                                                Qty: <strong style={{ color: "#111827" }}>{d.quantity}</strong>
+                                                {t('project.qty')}: <strong style={{ color: "#111827" }}>{d.quantity}</strong>
                                                 {d.notes && <div style={{ fontSize: 11, color: "#9ca3af", maxWidth: 200, marginTop: 4 }}>{d.notes}</div>}
                                             </div>
                                         </div>
-                                    )) || <em style={{ color: "#9ca3af" }}>No deliverables listed</em>}
+                                    )) || <em style={{ color: "#9ca3af" }}>{t('common.none')}</em>}
                                 </div>
                             </InfoSection>
                         </div>
 
                         {/* Evaluation Criteria */}
                         <div style={{ background: "white", padding: 32, borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-                            <InfoSection title="⭐ Evaluation Criteria">
-                                <h4 style={{ fontSize: 11, color: "#9ca3af", marginTop: 0, marginBottom: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Creative</h4>
+                            <InfoSection title={`⭐ ${t('project.evaluation')}`}>
+                                <h4 style={{ fontSize: 11, color: "#9ca3af", marginTop: 0, marginBottom: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>{t('project.creative')}</h4>
                                 <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
                                     {project.evaluation_criteria_creative?.map((c, i) => (
                                         <div key={i} style={{ display: "flex", alignItems: "start", gap: 10 }}>
@@ -312,10 +296,10 @@ export default function ProjectDetailPage() {
                                             </div>
                                             <span style={{ color: "#374151", flex: 1, lineHeight: 1.6, fontSize: 15 }}>{c}</span>
                                         </div>
-                                    )) || <div style={{ color: "#9ca3af" }}>None</div>}
+                                    )) || <div style={{ color: "#9ca3af" }}>{t('common.none')}</div>}
                                 </div>
 
-                                <h4 style={{ fontSize: 11, color: "#9ca3af", marginTop: 0, marginBottom: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>Technical</h4>
+                                <h4 style={{ fontSize: 11, color: "#9ca3af", marginTop: 0, marginBottom: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>{t('project.technical')}</h4>
                                 <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                                     {project.evaluation_criteria_technical?.map((c, i) => (
                                         <div key={i} style={{ display: "flex", alignItems: "start", gap: 10 }}>
@@ -335,7 +319,7 @@ export default function ProjectDetailPage() {
                                             </div>
                                             <span style={{ color: "#374151", flex: 1, lineHeight: 1.6 }}>{c}</span>
                                         </div>
-                                    )) || <div style={{ color: "#9ca3af" }}>None</div>}
+                                    )) || <div style={{ color: "#9ca3af" }}>{t('common.none')}</div>}
                                 </div>
                             </InfoSection>
                         </div>
@@ -354,7 +338,7 @@ export default function ProjectDetailPage() {
                                 letterSpacing: 1,
                                 fontWeight: 600
                             }}>
-                                👤 Client Profile
+                                {t('project.client')}
                             </h5>
                             <h2 style={{ margin: "0 0 6px 0", fontSize: 22, fontWeight: 700, color: "#111827" }}>
                                 {client?.name}
@@ -367,28 +351,28 @@ export default function ProjectDetailPage() {
 
                             <div style={{ display: "flex", flexDirection: "column", gap: 16, fontSize: 14 }}>
                                 <div>
-                                    <strong style={{ color: "#374151", display: "block", marginBottom: 6 }}>Summary</strong>
+                                    <strong style={{ color: "#374151", display: "block", marginBottom: 6 }}>{t('client.summary')}</strong>
                                     <span style={{ color: "#6b7280", lineHeight: 1.6 }}>{client?.summary}</span>
                                 </div>
                                 <div>
-                                    <strong style={{ color: "#374151", display: "block", marginBottom: 6 }}>What they do</strong>
+                                    <strong style={{ color: "#374151", display: "block", marginBottom: 6 }}>{t('client.whatTheyDo')}</strong>
                                     <span style={{ color: "#6b7280", lineHeight: 1.6 }}>{client?.what_they_do}</span>
                                 </div>
                                 <div>
-                                    <strong style={{ color: "#374151", display: "block", marginBottom: 6 }}>Primary Need</strong>
+                                    <strong style={{ color: "#374151", display: "block", marginBottom: 6 }}>{t('client.primaryNeed')}</strong>
                                     <span style={{ color: "#6b7280", lineHeight: 1.6 }}>{client?.primary_need}</span>
                                 </div>
                             </div>
 
                             <div style={{ marginTop: 24 }}>
                                 <strong style={{ fontSize: 13, display: "block", marginBottom: 10, color: "#374151" }}>
-                                    💚 Preferences
+                                    {t('client.preferences')}
                                 </strong>
                                 <TagList items={client?.preferences} color="#059669" />
                             </div>
                             <div style={{ marginTop: 20 }}>
                                 <strong style={{ fontSize: 13, display: "block", marginBottom: 10, color: "#374151" }}>
-                                    🚫 Dislikes
+                                    {t('client.dislikes')}
                                 </strong>
                                 <TagList items={client?.dislikes} color="#dc2626" />
                             </div>
@@ -405,7 +389,7 @@ export default function ProjectDetailPage() {
                                 fontWeight: 600,
                                 marginTop: 0
                             }}>
-                                🔧 Resources Provided
+                                🔧 {t('project.resources')}
                             </h5>
                             <TagList items={project.resources_provided} color="#3b82f6" />
                         </div>

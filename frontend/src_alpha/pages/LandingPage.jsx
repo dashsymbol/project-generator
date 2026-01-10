@@ -2,13 +2,15 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { api } from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { useLanguage } from "../context/LanguageContext";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 
 const STATUS_STYLES = {
-    GENERATING: { bg: "#fef3c7", color: "#92400e", label: "⏳ Generating" },
-    DRAFT: { bg: "#e0e7ff", color: "#3730a3", label: "📝 Draft" },
-    IN_PROGRESS: { bg: "#dbeafe", color: "#1e40af", label: "🔄 In Progress" },
-    DELIVERED: { bg: "#d1fae5", color: "#065f46", label: "✅ Delivered" },
-    FAILED: { bg: "#fee2e2", color: "#991b1b", label: "❌ Failed" },
+    GENERATING: { bg: "#fef3c7", color: "#92400e", label: "landing.status.generating" },
+    DRAFT: { bg: "#e0e7ff", color: "#3730a3", label: "landing.status.draft" },
+    IN_PROGRESS: { bg: "#dbeafe", color: "#1e40af", label: "landing.status.in_progress" },
+    DELIVERED: { bg: "#d1fae5", color: "#065f46", label: "landing.status.delivered" },
+    FAILED: { bg: "#fee2e2", color: "#991b1b", label: "landing.status.failed" },
 };
 
 const CATEGORY_COLORS = {
@@ -21,6 +23,7 @@ const CATEGORY_COLORS = {
 
 export default function LandingPage() {
     const { logout, user } = useAuth();
+    const { t } = useLanguage();
     const navigate = useNavigate();
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -64,25 +67,31 @@ export default function LandingPage() {
             <div style={{ maxWidth: 900, margin: "0 auto" }}>
                 {/* Header */}
                 <div style={{
-                    background: "white",
-                    padding: "24px 32px",
-                    borderRadius: 16,
-                    boxShadow: "0 4px 24px rgba(0,0,0,0.06)",
-                    marginBottom: 24,
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: "center"
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: 20,
+                    marginBottom: 40,
+                    background: "white",
+                    padding: "20px 24px",
+                    borderRadius: 16,
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.06)"
                 }}>
-                    <div>
-                        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 700, color: "#111827" }}>
-                            🎯 Project Generator
-                        </h1>
-                        <p style={{ margin: "4px 0 0", color: "#6b7280", fontSize: 14 }}>
-                            AI-powered project challenges tailored to you
-                        </p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                        <div style={{ fontSize: 32 }}>🎯</div>
+                        <div>
+                            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: "#111827", whiteSpace: "nowrap" }}>
+                                Project Generator
+                            </h1>
+                            <p style={{ margin: "4px 0 0 0", color: "#6b7280", fontSize: 14 }}>
+                                {t('landing.subtitle')}
+                            </p>
+                        </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                        <span style={{ color: "#6b7280", fontSize: 14, marginRight: 8 }}>Hi, {user?.username} 👋</span>
+                        <LanguageSwitcher />
+                        <span style={{ color: "#6b7280", fontSize: 14, margin: "0 8px", whiteSpace: "nowrap" }}>{t('landing.welcome')}, {user?.username} 👋</span>
                         <Link to="/profile">
                             <button style={{
                                 padding: "10px 16px",
@@ -92,18 +101,19 @@ export default function LandingPage() {
                                 cursor: "pointer",
                                 color: "#7c3aed",
                                 fontSize: 14,
-                                fontWeight: 600
+                                fontWeight: 600,
+                                whiteSpace: "nowrap"
                             }}>
-                                🧠 Profile
+                                🧠 {t('common.profile')}
                             </button>
                         </Link>
                         <button
                             onClick={logout}
-                            style={{ padding: "10px 16px", background: "#f3f4f6", border: "none", borderRadius: 10, cursor: "pointer", color: "#374151", fontSize: 14 }}
+                            style={{ padding: "10px 16px", background: "#f3f4f6", border: "none", borderRadius: 10, cursor: "pointer", color: "#374151", fontSize: 14, whiteSpace: "nowrap" }}
                         >
-                            Logout
+                            {t('auth.logout')}
                         </button>
-                        <Link to="/create">
+                        <Link to="/create-project">
                             <button style={{
                                 padding: "12px 20px",
                                 fontSize: 14,
@@ -113,9 +123,10 @@ export default function LandingPage() {
                                 color: "white",
                                 border: "none",
                                 borderRadius: 10,
-                                boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)"
+                                boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)",
+                                whiteSpace: "nowrap"
                             }}>
-                                ✨ New Project
+                                {t('landing.createProject')}
                             </button>
                         </Link>
                     </div>
@@ -129,17 +140,17 @@ export default function LandingPage() {
                     boxShadow: "0 4px 24px rgba(0,0,0,0.06)"
                 }}>
                     <h2 style={{ margin: "0 0 24px", fontSize: 18, fontWeight: 600, color: "#374151" }}>
-                        Your Projects
+                        {t('landing.subtitle')}
                     </h2>
 
                     {loading ? (
-                        <div style={{ textAlign: "center", color: "#6b7280", padding: 60 }}>Loading projects...</div>
+                        <div style={{ textAlign: "center", color: "#6b7280", padding: 60 }}>{t('common.loading')}</div>
                     ) : projects.length === 0 ? (
                         <div style={{ textAlign: "center", padding: 80, background: "#f9fafb", borderRadius: 12 }}>
                             <div style={{ fontSize: 48, marginBottom: 16 }}>🎨</div>
-                            <p style={{ fontSize: 18, color: "#374151", marginBottom: 8, fontWeight: 600 }}>No projects yet</p>
-                            <p style={{ color: "#6b7280", marginBottom: 24 }}>Generate your first AI-powered project challenge!</p>
-                            <Link to="/create">
+                            <p style={{ fontSize: 18, color: "#374151", marginBottom: 8, fontWeight: 600 }}>{t('landing.noProjects')}</p>
+                            <p style={{ color: "#6b7280", marginBottom: 24 }}>{t('landing.createFirst')}</p>
+                            <Link to="/create-project">
                                 <button style={{
                                     padding: "14px 28px",
                                     background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
@@ -151,20 +162,20 @@ export default function LandingPage() {
                                     cursor: "pointer",
                                     boxShadow: "0 4px 14px rgba(59, 130, 246, 0.3)"
                                 }}>
-                                    🚀 Create Your First Project
+                                    {t('create.generate')}
                                 </button>
                             </Link>
                         </div>
                     ) : (
                         <div style={{ display: "grid", gap: 16 }}>
                             {projects.map((p) => {
-                                const status = STATUS_STYLES[p.status] || STATUS_STYLES.DRAFT;
+                                const statusInfo = STATUS_STYLES[p.status] || STATUS_STYLES.DRAFT;
                                 const categoryColor = CATEGORY_COLORS[p.category] || CATEGORY_COLORS.General;
 
                                 return (
                                     <Link
                                         key={p.id}
-                                        to={`/projects/${p.id}`}
+                                        to={`/project/${p.id}`}
                                         style={{ textDecoration: "none" }}
                                     >
                                         <div style={{
@@ -185,14 +196,14 @@ export default function LandingPage() {
                                                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
                                                     <span style={{ fontWeight: 600, fontSize: 16, color: "#111827" }}>{p.title}</span>
                                                     <span style={{
-                                                        background: status.bg,
-                                                        color: status.color,
+                                                        background: statusInfo.bg,
+                                                        color: statusInfo.color,
                                                         padding: "4px 10px",
                                                         borderRadius: 6,
                                                         fontSize: 11,
                                                         fontWeight: 600
                                                     }}>
-                                                        {status.label}
+                                                        {t(statusInfo.label)}
                                                     </span>
                                                 </div>
                                                 <div style={{ display: "flex", alignItems: "center", gap: 16, color: "#6b7280", fontSize: 13 }}>

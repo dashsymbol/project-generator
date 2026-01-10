@@ -29,11 +29,11 @@ def questionnaire_config(request):
     except json.JSONDecodeError:
         return Response({"error": "Invalid configuration file"}, status=500)
 
-def run_background_generation(project_id, category, answers, profile_data=None, difficulty=None, focus_area=None):
+def run_background_generation(project_id, category, answers, profile_data=None, difficulty=None, focus_area=None, language="en"):
     """
     Background worker to call LLM and update Project/Client.
     """
-    logger.info(f"Starting background generation for Project {project_id}")
+    logger.info(f"Starting background generation for Project {project_id} (Lang: {language})")
     try:
         service = LLMService()
         client_data, project_data = service.generate_project(
@@ -41,7 +41,8 @@ def run_background_generation(project_id, category, answers, profile_data=None, 
             answers, 
             profile_data=profile_data, 
             difficulty=difficulty, 
-            focus_area=focus_area
+            focus_area=focus_area,
+            language=language
         )
 
         # Retrieve the placeholder project
@@ -100,6 +101,12 @@ class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
         difficulty = request.data.get("difficulty")
         focus_area = request.data.get("focus_area")
 
+        # Extract language from header
+        accept_language = request.headers.get('Accept-Language', 'en')
+        language = accept_language.split(',')[0].strip()[:2]
+        if language not in ['en', 'es']:
+            language = 'en'
+
         if not category or not answers:
             return Response(
                 {"error": "Category and answers are required"}, 
@@ -142,7 +149,7 @@ class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
 
         thread = threading.Thread(
             target=run_background_generation,
-            args=(project.id, category, answers, profile, difficulty, focus_area)
+            args=(project.id, category, answers, profile, difficulty, focus_area, language)
         )
         thread.start()
 
@@ -201,10 +208,16 @@ class UserSkillProfileViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Extract language from header
+        accept_language = request.headers.get('Accept-Language', 'en')
+        language = accept_language.split(',')[0].strip()[:2]
+        if language not in ['en', 'es']:
+            language = 'en'
+
         try:
             from .llm import LLMService
             llm = LLMService()
-            suggestions = llm.generate_skill_profile(user_input)
+            suggestions = llm.generate_skill_profile(user_input, language=language)
             
             logger.info(f"Generated skill profile suggestions for user {request.user.id}")
             return Response(suggestions, status=status.HTTP_200_OK)

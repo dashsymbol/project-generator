@@ -1,15 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "../services/api";
-
-const SKILL_LEVELS = [
-    { value: "BASIC", color: "#22c55e", label: "Basic", desc: "Just getting started" },
-    { value: "INTERMEDIATE", color: "#f59e0b", label: "Intermediate", desc: "Comfortable with fundamentals" },
-    { value: "ADVANCED", color: "#ef4444", label: "Advanced", desc: "Deep expertise" },
-];
+import { useLanguage } from "../context/LanguageContext";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 
 export default function SkillProfilePage() {
     const navigate = useNavigate();
+    const { t } = useLanguage();
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
     const [profileId, setProfileId] = useState(null);
@@ -24,6 +21,12 @@ export default function SkillProfilePage() {
     const [showAIModal, setShowAIModal] = useState(false);
     const [aiInput, setAiInput] = useState("");
     const [aiGenerating, setAiGenerating] = useState(false);
+
+    const SKILL_LEVELS = [
+        { value: "BASIC", color: "#22c55e", label: t('profile.level.basic.label'), desc: t('profile.level.basic.desc') },
+        { value: "INTERMEDIATE", color: "#f59e0b", label: t('profile.level.intermediate.label'), desc: t('profile.level.intermediate.desc') },
+        { value: "ADVANCED", color: "#ef4444", label: t('profile.level.advanced.label'), desc: t('profile.level.advanced.desc') },
+    ];
 
     useEffect(() => {
         api.getSkillProfile()
@@ -41,11 +44,11 @@ export default function SkillProfilePage() {
                 if (err.response && err.response.status === 404) {
                     // No profile yet
                 } else {
-                    setError("Failed to load profile.");
+                    setError(t('profile.error.load'));
                 }
             })
             .finally(() => setLoading(false));
-    }, []);
+    }, [t]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -63,18 +66,18 @@ export default function SkillProfilePage() {
         try {
             if (profileId) {
                 await api.updateSkillProfile(profileId, payload);
-                setSuccess("Profile updated successfully!");
+                setSuccess(t('common.save') + "!");
                 setTimeout(() => setSuccess(""), 3000);
             } else {
                 // First time creating profile - redirect to dashboard after success
                 const res = await api.createSkillProfile(payload);
                 setProfileId(res.data.id);
-                setSuccess("Profile created! Redirecting to dashboard...");
+                setSuccess(t('common.save') + "! Redirecting...");
                 setTimeout(() => navigate("/"), 1500);
             }
         } catch (err) {
             console.error("Profile save error:", err.response?.data);
-            const msg = err.response?.data?.[0] || JSON.stringify(err.response?.data) || "Failed to save profile.";
+            const msg = err.response?.data?.[0] || JSON.stringify(err.response?.data) || t('common.error');
             setError(msg);
         } finally {
             setSubmitting(false);
@@ -83,7 +86,7 @@ export default function SkillProfilePage() {
 
     const handleAIGenerate = async () => {
         if (!aiInput || aiInput.trim().length < 10) {
-            setError("Please describe your goals (at least 10 characters)");
+            setError(t('profile.error.desc_short'));
             return;
         }
 
@@ -104,11 +107,11 @@ export default function SkillProfilePage() {
 
             setShowAIModal(false);
             setAiInput("");
-            setSuccess("AI generated your profile! Review and edit before saving.");
+            setSuccess(t('profile.success.generated'));
             setTimeout(() => setSuccess(""), 5000);
         } catch (err) {
             console.error("AI generation error:", err.response?.data);
-            const msg = err.response?.data?.error || "Failed to generate profile. Please try again.";
+            const msg = err.response?.data?.error || t('common.error');
             setError(msg);
         } finally {
             setAiGenerating(false);
@@ -124,12 +127,13 @@ export default function SkillProfilePage() {
         transition: "all 0.15s ease",
         textAlign: "center",
         flex: 1,
+        minWidth: 80,
     });
 
     if (loading) {
         return (
             <div style={{ padding: 60, textAlign: "center", color: "#6b7280" }}>
-                Loading your profile...
+                {t('common.loading')}
             </div>
         );
     }
@@ -149,15 +153,18 @@ export default function SkillProfilePage() {
                 }
             `}</style>
             <div style={{ maxWidth: 560, margin: "0 auto", background: "#fff", padding: "36px 40px", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
-                <Link to="/" style={{ color: "#8b5cf6", textDecoration: "none", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 4 }}>
-                    ← Back to Dashboard
-                </Link>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                    <Link to="/" style={{ color: "#8b5cf6", textDecoration: "none", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 4, whiteSpace: "nowrap" }}>
+                        ← {t('common.dashboard')}
+                    </Link>
+                    <LanguageSwitcher />
+                </div>
 
-                <h1 style={{ marginTop: 16, marginBottom: 8, fontSize: 32, fontWeight: 700, color: "#111827" }}>
-                    Your Skill Profile 🧠
+                <h1 style={{ marginTop: 0, marginBottom: 8, fontSize: 32, fontWeight: 700, color: "#111827" }}>
+                    {t('profile.title')}
                 </h1>
                 <p style={{ color: "#6b7280", marginBottom: 16, fontSize: 15, lineHeight: 1.5 }}>
-                    This helps the AI generate projects tailored specifically to you.
+                    {t('profile.subtitle')}
                 </p>
 
                 {/* AI Help Button */}
@@ -176,12 +183,13 @@ export default function SkillProfilePage() {
                         marginBottom: 24,
                         display: "flex",
                         alignItems: "center",
-                        gap: 8
+                        gap: 8,
+                        whiteSpace: "nowrap"
                     }}
                     onMouseOver={(e) => { e.target.style.transform = "translateY(-1px)"; e.target.style.boxShadow = "0 6px 20px rgba(139, 92, 246, 0.4)"; }}
                     onMouseOut={(e) => { e.target.style.transform = "translateY(0)"; e.target.style.boxShadow = "0 4px 14px rgba(139, 92, 246, 0.3)"; }}
                 >
-                    ✨ Get AI Help
+                    {t('profile.ai.button')}
                 </button>
 
                 {error && (
@@ -200,7 +208,7 @@ export default function SkillProfilePage() {
                     {/* Skill Level */}
                     <div style={{ marginBottom: 28 }}>
                         <label style={{ display: "block", marginBottom: 12, fontWeight: 600, color: "#374151", fontSize: 14 }}>
-                            Overall Skill Level
+                            {t('profile.level.title')}
                         </label>
                         <div style={{ display: "flex", gap: 10 }}>
                             {SKILL_LEVELS.map(sl => (
@@ -220,12 +228,12 @@ export default function SkillProfilePage() {
                     {/* Skills */}
                     <div style={{ marginBottom: 24 }}>
                         <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>
-                            🎯 Your Skills
+                            {t('profile.skills.title')}
                         </label>
                         <textarea
                             value={formData.skills}
                             onChange={e => setFormData({ ...formData, skills: e.target.value })}
-                            placeholder="Python, React, TypeScript, Figma, SQL..."
+                            placeholder={t('profile.skills.placeholder')}
                             rows={2}
                             style={{
                                 width: "100%",
@@ -237,21 +245,18 @@ export default function SkillProfilePage() {
                                 fontFamily: "inherit"
                             }}
                         />
-                        <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 6 }}>
-                            Comma-separated. These will be used to generate relevant projects.
-                        </div>
                     </div>
 
                     {/* Preferred Tools */}
                     <div style={{ marginBottom: 24 }}>
                         <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>
-                            💚 Preferred Tools
+                            {t('profile.tools.title')}
                         </label>
                         <input
                             type="text"
                             value={formData.preferred_tools}
                             onChange={e => setFormData({ ...formData, preferred_tools: e.target.value })}
-                            placeholder="VS Code, Docker, PostgreSQL..."
+                            placeholder={t('profile.tools.placeholder')}
                             style={{
                                 width: "100%",
                                 padding: 14,
@@ -265,13 +270,13 @@ export default function SkillProfilePage() {
                     {/* Excluded Tools */}
                     <div style={{ marginBottom: 32 }}>
                         <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>
-                            🚫 Tools to Avoid
+                            {t('profile.avoid.title')}
                         </label>
                         <input
                             type="text"
                             value={formData.excluded_tools}
                             onChange={e => setFormData({ ...formData, excluded_tools: e.target.value })}
-                            placeholder="jQuery, PHP..."
+                            placeholder={t('profile.avoid.placeholder')}
                             style={{
                                 width: "100%",
                                 padding: 14,
@@ -299,7 +304,7 @@ export default function SkillProfilePage() {
                             transition: "all 0.15s ease",
                         }}
                     >
-                        {submitting ? "Saving..." : "💾 Save Profile"}
+                        {submitting ? t('common.loading') : t('profile.save')}
                     </button>
                 </form>
             </div>
@@ -328,16 +333,16 @@ export default function SkillProfilePage() {
                         boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
                     }}>
                         <h2 style={{ margin: "0 0 12px 0", fontSize: 24, fontWeight: 700, color: "#111827" }}>
-                            ✨ AI Profile Assistant
+                            {t('profile.modal.title')}
                         </h2>
                         <p style={{ color: "#6b7280", marginBottom: 20, fontSize: 14, lineHeight: 1.5 }}>
-                            Tell me about your goals and what you want to learn, and I'll help fill out your profile!
+                            {t('profile.modal.desc')}
                         </p>
 
                         <textarea
                             value={aiInput}
                             onChange={(e) => setAiInput(e.target.value)}
-                            placeholder="Example: I'm a beginner who wants to learn web development and build interactive websites with React..."
+                            placeholder={t('profile.modal.placeholder')}
                             rows={5}
                             style={{
                                 width: "100%",
@@ -366,7 +371,7 @@ export default function SkillProfilePage() {
                                     color: "#374151"
                                 }}
                             >
-                                Cancel
+                                {t('common.cancel')}
                             </button>
                             <button
                                 onClick={handleAIGenerate}
@@ -383,7 +388,7 @@ export default function SkillProfilePage() {
                                     boxShadow: aiGenerating ? "none" : "0 4px 14px rgba(139, 92, 246, 0.3)"
                                 }}
                             >
-                                {aiGenerating ? "Generating..." : "🚀 Generate Profile"}
+                                {aiGenerating ? t('common.loading') : t('profile.modal.generate')}
                             </button>
                         </div>
                     </div>

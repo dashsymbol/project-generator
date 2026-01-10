@@ -9,12 +9,16 @@ const client = axios.create({
     },
 });
 
-// Add Token to requests if available
+// Add Token and Language to requests
 client.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
+    const language = localStorage.getItem('app_language') || 'en';
+
     if (token) {
         config.headers.Authorization = `Token ${token}`;
     }
+
+    config.headers['Accept-Language'] = language;
     return config;
 });
 

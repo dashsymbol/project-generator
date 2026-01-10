@@ -2,6 +2,8 @@ services:
   backend:
     build:
       context: ./backend
+    env_file:
+      - .env
     environment:
       DJANGO_DEBUG: "1"
       DJANGO_SECRET_KEY: "dev-secret-key"

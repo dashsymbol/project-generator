@@ -1,0 +1,44 @@
+{
+    "version": "1.0",
+    "title": "About You",
+    "questions": [
+        {
+            "key": "skill_level",
+            "label": "Skill level in this category",
+            "type": "select",
+            "required": true,
+            "options": [
+                "Beginner",
+                "Intermediate",
+                "Operational"
+            ]
+        },
+        {
+            "key": "time_budget_hours",
+            "label": "Time budget in hours",
+            "type": "number",
+            "required": true,
+            "min": 1,
+            "max": 40
+        },
+        {
+            "key": "tooling",
+            "label": "Preferred tools",
+            "type": "multi_select",
+            "required": false,
+            "options": [
+                "Figma",
+                "Canva",
+                "Adobe Illustrator",
+                "Adobe Photoshop"
+            ]
+        },
+        {
+            "key": "style_preference",
+            "label": "Style preference",
+            "type": "text",
+            "required": false,
+            "max_length": 200
+        }
+    ]
+}

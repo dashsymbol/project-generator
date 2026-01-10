@@ -117,42 +117,88 @@ class LLMService:
         else:
             self.model = None
 
-    def generate_project(self, category, answers):
+    def generate_project(self, category, answers, profile_data=None, difficulty=None, focus_area=None):
         if not self.model:
             logger.warning("No GEMINI_API_KEY found, using stub.")
             return self._generate_stub(category, answers)
 
-        logger.info(f"Generating project for category: {category}")
+        # Extract selection-based fields from answers
+        time_budget = answers.get("time_budget_hours", 10)
+        project_type = answers.get("project_type", "surprise")  # surprise, practical, learning, portfolio, fun
+
+        logger.info(f"Generating {project_type} project for user with difficulty {difficulty}...")
         
-        # 1. Generate Client
+        # Prepare Context String
+        adaptive_context = f"\nDIFFICULTY LEVEL: {difficulty or 'INTERMEDIATE'}"
+        adaptive_context += f"\nTIME BUDGET: {time_budget} hours"
+        adaptive_context += f"\nPROJECT TYPE: {project_type}"
+        if profile_data:
+            adaptive_context += f"\nUSER SKILL PROFILE:\n{json.dumps(profile_data, indent=2)}"
+
+        # 1. Generate Client AND Project Topic (AI invents both)
         client_data = self._call_gemini(
             system_prompt=(
-                "You are an expert creative director. Generate a detailed fictitious client profile. "
-                "CRITICAL: You MUST use the 'User Questionnaire Answers' below to tailor this profile. "
-                "The user's input dictates the specific needs, industry, and preferences of this client. "
-                "Do not ignore their specific text inputs."
+                "You are an expert at creating realistic, engaging project scenarios for skill development. "
+                "Your job is to INVENT a fictitious client with a specific project need. "
+                "CRITICAL INSTRUCTIONS:\n"
+                "1. Look at the USER SKILL PROFILE to see what skills the user has (e.g., Python, React, Figma).\n"
+                "2. Based on their skills, INVENT a realistic client who would hire someone with those skills.\n"
+                "3. The client should have a SPECIFIC, interesting project need that matches the user's abilities.\n"
+                "4. Consider the PROJECT TYPE preference:\n"
+                "   - 'surprise': Be creative, pick something unexpected but achievable.\n"
+                "   - 'practical': A real-world tool they could actually use.\n"
+                "   - 'learning': Focused on teaching a new concept or pattern.\n"
+                "   - 'portfolio': Something impressive they can show off.\n"
+                "   - 'fun': A game, creative project, or something enjoyable.\n"
+                "5. Make the client's needs detailed and specific."
             ),
-            user_prompt=f"Category: {category}\n\nUSER QUESTIONNAIRE ANSWERS:\n{json.dumps(answers, indent=2)}",
+            user_prompt=f"Generate a client for this user:{adaptive_context}",
             schema=CLIENT_SCHEMA
         )
 
-        # 2. Generate Project
+        # 2. Generate Project Brief based on the invented client
         project_data = self._call_gemini(
             system_prompt=(
-                "You are an expert project manager. Create a detailed creative brief for the following client. "
-                "CRITICAL: The 'User Questionnaire Answers' are the MOST IMPORTANT source of truth. "
-                "If the user specified constraints, preferences, or details in their answers, you MUST incorporate them into the brief. "
-                "Be specific with deliverables and scope based on their input."
+                "You are an expert project manager. Create a detailed, actionable project brief. "
+                "The client profile was just generated - now create the corresponding project. "
+                "CRITICAL INSTRUCTIONS:\n"
+                "1. The project should match the client's needs EXACTLY.\n"
+                "2. Tailor deliverables to the USER'S SKILLS from their profile.\n"
+                "3. Match the DIFFICULTY LEVEL (Basic=simple features, Advanced=complex architecture).\n"
+                "4. Scope it to fit the TIME BUDGET.\n"
+                "5. Be SPECIFIC with deliverables (e.g., 'Python Flask API with 3 endpoints', not 'an API').\n"
+                "6. Include concrete acceptance criteria.\n"
+                "7. Make it challenging but achievable - push them slightly beyond their comfort zone."
             ),
-            user_prompt=f"Category: {category}\n\nClient Profile: {json.dumps(client_data)}\n\nUSER QUESTIONNAIRE ANSWERS:\n{json.dumps(answers, indent=2)}",
+            user_prompt=f"Client Profile: {json.dumps(client_data)}{adaptive_context}",
             schema=PROJECT_SCHEMA
         )
         
-        project_data["category"] = category
+        # Infer category from skills
+        inferred_category = self._infer_category("", profile_data)
+        project_data["category"] = inferred_category
         project_data["source_answers"] = answers
         project_data["status"] = "DRAFT"
 
         return client_data, project_data
+
+    def _infer_category(self, description, profile_data):
+        """Simple category inference based on keywords"""
+        desc_lower = description.lower()
+        skills = profile_data.get("skills", []) if profile_data else []
+        skills_lower = [s.lower() for s in skills]
+        
+        if any(kw in desc_lower for kw in ["python", "cli", "api", "backend", "script"]) or "python" in skills_lower:
+            return "Software Development"
+        elif any(kw in desc_lower for kw in ["react", "frontend", "web", "dashboard", "html"]) or "react" in skills_lower:
+            return "Web Development"
+        elif any(kw in desc_lower for kw in ["logo", "branding", "design", "ui", "ux"]) or any(s in skills_lower for s in ["figma", "photoshop", "illustrator"]):
+            return "Design"
+        elif any(kw in desc_lower for kw in ["write", "blog", "content", "copy"]):
+            return "Writing"
+        else:
+            return "General"
+
 
     def _call_gemini(self, system_prompt, user_prompt, schema, max_retries=3):
         # Gemma-3-27b-it does NOT support native JSON mode / constrained decoding via API yet (Error 400).
@@ -223,6 +269,65 @@ class LLMService:
         raise Exception("Max retries exceeded for Gemini generation")
         
         raise Exception("Max retries exceeded for Gemini generation")
+
+    def generate_skill_profile(self, user_input):
+        """
+        Analyze user's goals/interests and generate skill profile suggestions.
+        """
+        if not self.model:
+            logger.warning("No GEMINI_API_KEY found, using stub.")
+            return {
+                "skill_level": "INTERMEDIATE",
+                "skills": ["Python", "JavaScript"],
+                "preferred_tools": ["VSCode"],
+                "excluded_tools": []
+            }
+
+        SKILL_PROFILE_SCHEMA = {
+            "type": "OBJECT",
+            "properties": {
+                "skill_level": {
+                    "type": "STRING",
+                    "enum": ["BASIC", "INTERMEDIATE", "ADVANCED"]
+                },
+                "skills": {
+                    "type": "ARRAY",
+                    "items": {"type": "STRING"}
+                },
+                "preferred_tools": {
+                    "type": "ARRAY",
+                    "items": {"type": "STRING"}
+                },
+                "excluded_tools": {
+                    "type": "ARRAY",
+                    "items": {"type": "STRING"}
+                }
+            },
+            "required": ["skill_level", "skills", "preferred_tools"]
+        }
+
+        logger.info(f"Generating skill profile from user input: {user_input[:100]}...")
+
+        result = self._call_gemini(
+            system_prompt=(
+                "You are an expert career advisor and skill assessor. "
+                "Analyze the user's description of their goals, interests, and current abilities. "
+                "Generate a skill profile that accurately reflects their level and interests.\n\n"
+                "INSTRUCTIONS:\n"
+                "1. Determine skill_level based on their description:\n"
+                "   - BASIC: Beginner, just starting, learning fundamentals\n"
+                "   - INTERMEDIATE: Some experience, comfortable with basics, building projects\n"
+                "   - ADVANCED: Expert, deep knowledge, professional experience\n"
+                "2. List relevant skills they mentioned or should learn (be specific, e.g., 'React' not just 'JavaScript')\n"
+                "3. Suggest 2-4 preferred_tools that match their skills and goals\n"
+                "4. Leave excluded_tools empty (user will add if needed)\n"
+                "5. Be practical and realistic - don't overwhelm beginners with too many skills"
+            ),
+            user_prompt=f"User's description: {user_input}",
+            schema=SKILL_PROFILE_SCHEMA
+        )
+
+        return result
 
     def _generate_stub(self, category, answers):
         client_data = {

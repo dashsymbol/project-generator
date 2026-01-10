@@ -4,6 +4,7 @@ import CreateProjectPage from "./pages/CreateProjectPage";
 import ProjectDetailPage from "./pages/ProjectDetailPage";
 import LoginPage from "./pages/auth/LoginPage";
 import SignupPage from "./pages/auth/SignupPage";
+import SkillProfilePage from "./pages/SkillProfilePage";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 
 const PrivateRoute = () => {
@@ -30,6 +31,7 @@ export default function App() {
 
           <Route element={<PrivateRoute />}>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/profile" element={<SkillProfilePage />} />
             <Route path="/create" element={<CreateProjectPage />} />
             <Route path="/projects/:id" element={<ProjectDetailPage />} />
           </Route>

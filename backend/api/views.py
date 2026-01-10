@@ -7,8 +7,8 @@ from django.conf import settings
 from rest_framework import viewsets, status, authentication, permissions
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
-from .models import Project, Client
-from .serializers import ProjectSerializer
+from .models import Project, Client, UserSkillProfile
+from .serializers import ProjectSerializer, UserSkillProfileSerializer
 from .llm import LLMService
 
 logger = logging.getLogger('api')
@@ -29,14 +29,20 @@ def questionnaire_config(request):
     except json.JSONDecodeError:
         return Response({"error": "Invalid configuration file"}, status=500)
 
-def run_background_generation(project_id, category, answers):
+def run_background_generation(project_id, category, answers, profile_data=None, difficulty=None, focus_area=None):
     """
     Background worker to call LLM and update Project/Client.
     """
     logger.info(f"Starting background generation for Project {project_id}")
     try:
         service = LLMService()
-        client_data, project_data = service.generate_project(category, answers)
+        client_data, project_data = service.generate_project(
+            category, 
+            answers, 
+            profile_data=profile_data, 
+            difficulty=difficulty, 
+            focus_area=focus_area
+        )
 
         # Retrieve the placeholder project
         try:
@@ -83,8 +89,16 @@ class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(detail=False, methods=['post'])
     def generate(self, request):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            logger.warning(f"Project generate validation failed: {serializer.errors}")
+            # We still proceed with the custom logic below to extract fields manually 
+            # as it was implemented before, but logging helps debug.
+        
         category = request.data.get("category")
         answers = request.data.get("answers")
+        difficulty = request.data.get("difficulty")
+        focus_area = request.data.get("focus_area")
 
         if not category or not answers:
             return Response(
@@ -112,12 +126,91 @@ class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
         )
 
         # 2. Spawn Background Thread
+        # Fetch profile data to pass to thread
+        profile = None
+        try:
+             user_profile = UserSkillProfile.objects.get(user=request.user)
+             # Basic serialization
+             profile = {
+                 "skills": user_profile.skills,
+                 "skill_level": user_profile.skill_level,
+                 "preferred_tools": user_profile.preferred_tools,
+                 "excluded_tools": user_profile.excluded_tools
+             }
+        except UserSkillProfile.DoesNotExist:
+             pass
+
         thread = threading.Thread(
             target=run_background_generation,
-            args=(project.id, category, answers)
+            args=(project.id, category, answers, profile, difficulty, focus_area)
         )
         thread.start()
 
         # 3. Serialize and Return Immediately
         serializer = ProjectSerializer(project)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+class UserSkillProfileViewSet(viewsets.ModelViewSet):
+    """Manage user skill profile"""
+    serializer_class = UserSkillProfileSerializer
+    authentication_classes = (authentication.TokenAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+    queryset = UserSkillProfile.objects.all()
+
+    def get_queryset(self):
+        """Retrieve profile for authenticated user"""
+        return self.queryset.filter(user=self.request.user)
+    
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        if not serializer.is_valid():
+            logger.warning(f"UserSkillProfile validation failed: {serializer.errors}")
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data, partial=True)
+        if not serializer.is_valid():
+            logger.warning(f"UserSkillProfile update validation failed: {serializer.errors}")
+        return super().update(request, *args, **kwargs)
+
+    def perform_create(self, serializer):
+        """Link profile to user"""
+        try:
+            serializer.save(user=self.request.user)
+        except Exception as e:
+            logger.error(f"Error saving UserSkillProfile: {str(e)}")
+            raise
+
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """Get my profile specifically (convenience)"""
+        profile = self.get_queryset().first()
+        if profile:
+            serializer = self.get_serializer(profile)
+            return Response(serializer.data)
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=False, methods=['post'])
+    def generate(self, request):
+        """Generate skill profile suggestions using AI"""
+        user_input = request.data.get('user_input', '')
+        
+        if not user_input or len(user_input.strip()) < 10:
+            return Response(
+                {"error": "Please provide a description of your goals (at least 10 characters)"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            from .llm import LLMService
+            llm = LLMService()
+            suggestions = llm.generate_skill_profile(user_input)
+            
+            logger.info(f"Generated skill profile suggestions for user {request.user.id}")
+            return Response(suggestions, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"Error generating skill profile: {str(e)}")
+            return Response(
+                {"error": "Failed to generate profile suggestions. Please try again."},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

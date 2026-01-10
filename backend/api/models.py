@@ -83,7 +83,7 @@ class UserSkillProfile(models.Model):
         ADVANCED = 'ADVANCED', 'Advanced'
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='skill_profile', db_index=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='skill_profile', db_index=True)
     skills = models.JSONField(default=list)
     skill_level = models.CharField(max_length=20, choices=SkillLevel.choices)
     preferred_tools = models.JSONField(default=list)

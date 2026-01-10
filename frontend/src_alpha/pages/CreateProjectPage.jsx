@@ -2,201 +2,231 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { api } from "../services/api";
 
-const CATEGORIES = ["Branding", "UI Design", "Packaging"];
+const PROJECT_TYPES = [
+    { value: "surprise", emoji: "🎲", label: "Surprise Me", desc: "AI picks something creative" },
+    { value: "practical", emoji: "🛠️", label: "Practical Tool", desc: "Something you can actually use" },
+    { value: "learning", emoji: "📚", label: "Learning Exercise", desc: "Focus on a new concept" },
+    { value: "portfolio", emoji: "💼", label: "Portfolio Piece", desc: "Something to show off" },
+    { value: "fun", emoji: "🎮", label: "Fun Project", desc: "Games and creative stuff" },
+];
+
+const DIFFICULTIES = [
+    { value: "BASIC", color: "#22c55e", label: "Basic", desc: "Beginner-friendly" },
+    { value: "INTERMEDIATE", color: "#f59e0b", label: "Intermediate", desc: "Some challenge" },
+    { value: "ADVANCED", color: "#ef4444", label: "Advanced", desc: "Push your limits" },
+];
+
+const TIME_OPTIONS = [
+    { value: "2", label: "2h", desc: "Quick sprint" },
+    { value: "5", label: "5h", desc: "Half day" },
+    { value: "10", label: "10h", desc: "Weekend" },
+    { value: "20", label: "20h", desc: "Week project" },
+    { value: "40", label: "40h+", desc: "Major build" },
+];
 
 export default function CreateProjectPage() {
     const navigate = useNavigate();
-    const [step, setStep] = useState(1);
-    const [category, setCategory] = useState("");
-    const [questionnaire, setQuestionnaire] = useState(null);
-    const [answers, setAnswers] = useState({});
-    const [loadingConfig, setLoadingConfig] = useState(false);
     const [generating, setGenerating] = useState(false);
     const [error, setError] = useState(null);
 
-    // Load questionnaire on mount
+    const [difficulty, setDifficulty] = useState("INTERMEDIATE");
+    const [timeBudget, setTimeBudget] = useState("10");
+    const [projectType, setProjectType] = useState("surprise");
+
     useEffect(() => {
-        setLoadingConfig(true);
-        api.getQuestionnaire()
-            .then((res) => setQuestionnaire(res.data))
-            .catch((err) => setError("Failed to load configuration"))
-            .finally(() => setLoadingConfig(false));
+        api.getSkillProfile()
+            .then(res => {
+                if (res.data && res.data.skill_level) setDifficulty(res.data.skill_level);
+            })
+            .catch(() => { });
     }, []);
 
-    const handleCategorySelect = (cat) => {
-        setCategory(cat);
-        setStep(2);
-    };
-
-    const handleAnswerChange = (key, value) => {
-        setAnswers(prev => ({ ...prev, [key]: value }));
-    };
-
-    const handleSubmit = async () => {
+    const handleSubmit = async (e) => {
+        e.preventDefault();
         setGenerating(true);
         setError(null);
+
+        const answers = {
+            time_budget_hours: parseInt(timeBudget, 10),
+            project_type: projectType,
+        };
+
         try {
-            await api.generateProject(category, answers);
-            // Show "Generating" UI for 5 seconds, then go to Dashboard
-            setTimeout(() => {
-                navigate("/");
-            }, 5000);
+            await api.generateProject("Auto", answers, difficulty, "");
+            setTimeout(() => navigate("/"), 5000);
         } catch (err) {
-            setError("Generation failed. Please try again.");
+            console.error("Generation error:", err.response?.data);
+            const msg = err.response?.data?.error || JSON.stringify(err.response?.data) || "Generation failed.";
+            setError(msg);
             setGenerating(false);
         }
     };
 
-    if (loadingConfig) return <div style={{ padding: 40, textAlign: "center", color: "#6c757d" }}>Loading config...</div>;
-    if (error && !generating) return <div style={{ padding: 40, textAlign: "center", color: "#dc3545" }}>Error: {error}</div>;
+    const cardStyle = (isSelected) => ({
+        padding: "14px 16px",
+        border: isSelected ? "2px solid #3b82f6" : "1px solid #e5e7eb",
+        borderRadius: 12,
+        cursor: "pointer",
+        background: isSelected ? "#eff6ff" : "#fff",
+        transition: "all 0.15s ease",
+        textAlign: "center",
+        flex: 1,
+        minWidth: 80,
+    });
 
     return (
         <div style={{
-            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-            background: "#f8f9fa",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
             minHeight: "100vh",
-            padding: "40px 20px"
+            padding: "40px 20px",
+            animation: "fadeIn 0.3s ease-in"
         }}>
-            <div style={{ maxWidth: 600, margin: "0 auto", background: "#fff", padding: 40, borderRadius: 8, boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
-                <Link to="/" style={{ color: "#0d6efd", textDecoration: "none", marginBottom: 20, display: "inline-block" }}>&larr; Back to Home</Link>
-                <h1 style={{ marginTop: 0, fontSize: 28, color: "#212529" }}>Create New Project</h1>
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            `}</style>
+            <div style={{ maxWidth: 560, margin: "0 auto", background: "#fff", padding: "36px 40px", borderRadius: 16, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+                <Link to="/" style={{ color: "#3b82f6", textDecoration: "none", fontSize: 14, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                    ← Back to Dashboard
+                </Link>
 
-                {/* Step 1: Category */}
-                {step === 1 && (
-                    <div>
-                        <h2 style={{ fontSize: 20, color: "#495057", marginBottom: 20 }}>Step 1: Select Category</h2>
-                        <div style={{ display: "flex", gap: 12, flexDirection: "column" }}>
-                            {CATEGORIES.map(cat => (
-                                <button
-                                    key={cat}
-                                    onClick={() => handleCategorySelect(cat)}
-                                    style={{
-                                        padding: "16px 20px",
-                                        fontSize: 16,
-                                        cursor: "pointer",
-                                        textAlign: "left",
-                                        background: "#fff",
-                                        border: "1px solid #ced4da",
-                                        borderRadius: 6,
-                                        color: "#212529",
-                                        transition: "all 0.2s"
-                                    }}
-                                    onMouseOver={(e) => { e.target.style.borderColor = "#0d6efd"; e.target.style.background = "#f8f9fa"; }}
-                                    onMouseOut={(e) => { e.target.style.borderColor = "#ced4da"; e.target.style.background = "#fff"; }}
+                <h1 style={{ marginTop: 16, marginBottom: 8, fontSize: 32, fontWeight: 700, color: "#111827" }}>
+                    Generate a Project ✨
+                </h1>
+                <p style={{ color: "#6b7280", marginBottom: 32, fontSize: 15, lineHeight: 1.5 }}>
+                    The AI will create a unique challenge based on your skills. Just pick your preferences!
+                </p>
+
+                {error && (
+                    <div style={{ color: "#dc2626", background: "#fef2f2", padding: 14, borderRadius: 10, marginBottom: 24, fontSize: 14 }}>
+                        {error}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit}>
+                    {/* Project Type */}
+                    <div style={{ marginBottom: 28 }}>
+                        <label style={{ display: "block", marginBottom: 12, fontWeight: 600, color: "#374151", fontSize: 14 }}>
+                            What kind of project?
+                        </label>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10 }}>
+                            {PROJECT_TYPES.slice(0, 3).map(pt => (
+                                <div
+                                    key={pt.value}
+                                    onClick={() => setProjectType(pt.value)}
+                                    style={cardStyle(projectType === pt.value)}
                                 >
-                                    {cat}
-                                </button>
+                                    <div style={{ fontSize: 24, marginBottom: 4 }}>{pt.emoji}</div>
+                                    <div style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{pt.label}</div>
+                                </div>
+                            ))}
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 10, marginTop: 10 }}>
+                            {PROJECT_TYPES.slice(3).map(pt => (
+                                <div
+                                    key={pt.value}
+                                    onClick={() => setProjectType(pt.value)}
+                                    style={cardStyle(projectType === pt.value)}
+                                >
+                                    <div style={{ fontSize: 24, marginBottom: 4 }}>{pt.emoji}</div>
+                                    <div style={{ fontWeight: 600, fontSize: 13, color: "#111827" }}>{pt.label}</div>
+                                </div>
                             ))}
                         </div>
                     </div>
-                )}
 
-                {/* Step 2: Questionnaire */}
-                {step === 2 && questionnaire && (
-                    <div>
-                        <h2 style={{ fontSize: 20, color: "#495057", marginBottom: 20 }}>Step 2: About You</h2>
-                        <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
-                            {questionnaire.questions.map((q) => (
-                                <div key={q.key} style={{ marginBottom: 24 }}>
-                                    <label style={{ display: "block", marginBottom: 8, fontWeight: 500, color: "#212529" }}>
-                                        {q.label} {q.required && <span style={{ color: "#dc3545" }}>*</span>}
-                                    </label>
-
-                                    {q.type === "select" && (
-                                        <select
-                                            required={q.required}
-                                            onChange={(e) => handleAnswerChange(q.key, e.target.value)}
-                                            value={answers[q.key] || ""}
-                                            style={{ width: "100%", padding: "10px", borderRadius: 4, border: "1px solid #ced4da", fontSize: 16 }}
-                                        >
-                                            <option value="">Select...</option>
-                                            {q.options?.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                                        </select>
-                                    )}
-
-                                    {q.type === "number" && (
-                                        <input
-                                            type="number"
-                                            required={q.required}
-                                            min={q.min}
-                                            max={q.max}
-                                            onChange={(e) => handleAnswerChange(q.key, e.target.value)}
-                                            value={answers[q.key] || ""}
-                                            style={{ width: "100%", padding: "10px", borderRadius: 4, border: "1px solid #ced4da", fontSize: 16 }}
-                                        />
-                                    )}
-
-                                    {(q.type === "text") && (
-                                        <input
-                                            type="text"
-                                            required={q.required}
-                                            maxLength={q.max_length}
-                                            onChange={(e) => handleAnswerChange(q.key, e.target.value)}
-                                            value={answers[q.key] || ""}
-                                            style={{ width: "100%", padding: "10px", borderRadius: 4, border: "1px solid #ced4da", fontSize: 16 }}
-                                        />
-                                    )}
-
-                                    {q.type === "multi_select" && (
-                                        <div style={{ border: "1px solid #ced4da", padding: 12, borderRadius: 4 }}>
-                                            <small style={{ display: "block", marginBottom: 8, color: "#6c757d" }}>Select all that apply:</small>
-                                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                                                {q.options?.map(opt => (
-                                                    <label key={opt} style={{ fontWeight: "normal", display: "flex", alignItems: "center", gap: 8 }}>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={answers[q.key]?.includes(opt) || false}
-                                                            onChange={(e) => {
-                                                                const current = answers[q.key] || [];
-                                                                if (e.target.checked) handleAnswerChange(q.key, [...current, opt]);
-                                                                else handleAnswerChange(q.key, current.filter(x => x !== opt));
-                                                            }}
-                                                        />
-                                                        {opt}
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-
-                            {generating ? (
-                                <div style={{ padding: 40, textAlign: "center", color: "#495057", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
-                                    <div style={{ fontSize: 20, marginBottom: 12 }}>✨ Generating your project details...</div>
-                                    <div style={{ color: "#868e96", marginBottom: 20 }}>This usually takes about 10-20 seconds with the AI model.</div>
-                                    <div style={{
-                                        width: 30,
-                                        height: 30,
-                                        border: "3px solid #e9ecef",
-                                        borderTop: "3px solid #0d6efd",
-                                        borderRadius: "50%",
-                                        animation: "spin 1s linear infinite"
-                                    }}>
-                                        <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
-                                    </div>
-                                </div>
-                            ) : (
-                                <button
-                                    type="submit"
+                    {/* Difficulty */}
+                    <div style={{ marginBottom: 28 }}>
+                        <label style={{ display: "block", marginBottom: 12, fontWeight: 600, color: "#374151", fontSize: 14 }}>
+                            Challenge level
+                        </label>
+                        <div style={{ display: "flex", gap: 10 }}>
+                            {DIFFICULTIES.map(d => (
+                                <div
+                                    key={d.value}
+                                    onClick={() => setDifficulty(d.value)}
                                     style={{
-                                        width: "100%",
-                                        padding: 16,
-                                        fontSize: 16,
-                                        fontWeight: 600,
-                                        background: "#0d6efd",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: 6,
-                                        cursor: "pointer"
+                                        ...cardStyle(difficulty === d.value),
+                                        borderColor: difficulty === d.value ? d.color : "#e5e7eb",
+                                        background: difficulty === d.value ? `${d.color}10` : "#fff",
                                     }}
                                 >
-                                    Generate Project using Gemma-3
-                                </button>
-                            )}
-                        </form>
+                                    <div style={{ width: 12, height: 12, borderRadius: "50%", background: d.color, margin: "0 auto 8px" }} />
+                                    <div style={{ fontWeight: 600, fontSize: 14, color: "#111827" }}>{d.label}</div>
+                                    <div style={{ fontSize: 11, color: "#6b7280", marginTop: 2 }}>{d.desc}</div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                )}
+
+                    {/* Time Budget */}
+                    <div style={{ marginBottom: 32 }}>
+                        <label style={{ display: "block", marginBottom: 12, fontWeight: 600, color: "#374151", fontSize: 14 }}>
+                            Time to invest
+                        </label>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            {TIME_OPTIONS.map(t => (
+                                <div
+                                    key={t.value}
+                                    onClick={() => setTimeBudget(t.value)}
+                                    style={{
+                                        ...cardStyle(timeBudget === t.value),
+                                        padding: "12px 8px",
+                                    }}
+                                >
+                                    <div style={{ fontWeight: 700, fontSize: 16, color: "#111827" }}>{t.label}</div>
+                                    <div style={{ fontSize: 10, color: "#9ca3af", marginTop: 2 }}>{t.desc}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {generating ? (
+                        <div style={{ padding: 32, textAlign: "center", background: "#f0f9ff", borderRadius: 12 }}>
+                            <div style={{ fontSize: 18, fontWeight: 600, color: "#1e40af", marginBottom: 8 }}>
+                                ✨ Generating your project...
+                            </div>
+                            <div style={{ color: "#6b7280", fontSize: 14, marginBottom: 16 }}>
+                                The AI is crafting something just for you!
+                            </div>
+                            <div style={{
+                                width: 32,
+                                height: 32,
+                                border: "3px solid #dbeafe",
+                                borderTop: "3px solid #3b82f6",
+                                borderRadius: "50%",
+                                animation: "spin 1s linear infinite",
+                                margin: "0 auto"
+                            }}>
+                                <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
+                            </div>
+                        </div>
+                    ) : (
+                        <button
+                            type="submit"
+                            style={{
+                                width: "100%",
+                                padding: "16px 24px",
+                                fontSize: 16,
+                                fontWeight: 600,
+                                background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                                color: "white",
+                                border: "none",
+                                borderRadius: 12,
+                                cursor: "pointer",
+                                boxShadow: "0 4px 14px rgba(59, 130, 246, 0.4)",
+                                transition: "transform 0.15s ease, box-shadow 0.15s ease",
+                            }}
+                            onMouseOver={(e) => { e.target.style.transform = "translateY(-1px)"; e.target.style.boxShadow = "0 6px 20px rgba(59, 130, 246, 0.5)"; }}
+                            onMouseOut={(e) => { e.target.style.transform = "translateY(0)"; e.target.style.boxShadow = "0 4px 14px rgba(59, 130, 246, 0.4)"; }}
+                        >
+                            🚀 Generate My Project
+                        </button>
+                    )}
+                </form>
             </div>
         </div>
     );

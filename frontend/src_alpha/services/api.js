@@ -24,10 +24,16 @@ export const api = {
     signup: (data) => client.post('/auth/signup/', data),
     getMe: () => client.get('/auth/me/'),
 
+    // Skills
+    getSkillProfile: () => client.get('/skills/me/'),
+    createSkillProfile: (data) => client.post('/skills/', data),
+    updateSkillProfile: (id, data) => client.put(`/skills/${id}/`, data),
+    generateSkillProfile: (userInput) => client.post('/skills/generate/', { user_input: userInput }),
+
     // App
     checkHealth: () => client.get('/health'),
     getQuestionnaire: () => client.get('/config/questionnaire'),
     getProjects: () => client.get('/projects/'),
     getProject: (id) => client.get(`/projects/${id}/`),
-    generateProject: (category, answers) => client.post('/projects/generate/', { category, answers }),
+    generateProject: (category, answers, difficulty, focus_area) => client.post('/projects/generate/', { category, answers, difficulty, focus_area }),
 };

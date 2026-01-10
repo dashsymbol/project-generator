@@ -24,28 +24,77 @@ export default function LoginPage() {
     };
 
     return (
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh", background: "#f8f9fa", fontFamily: "system-ui" }}>
-            <div style={{ background: "white", padding: 40, borderRadius: 8, boxShadow: "0 2px 10px rgba(0,0,0,0.1)", width: "100%", maxWidth: 400 }}>
-                <h2 style={{ textAlign: "center", marginBottom: 24, marginTop: 0 }}>Welcome Back</h2>
-                {error && <div style={{ color: "#dc3545", background: "#f8d7da", padding: 10, borderRadius: 4, marginBottom: 20, fontSize: 14 }}>{error}</div>}
+        <div style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "100vh",
+            background: "linear-gradient(135deg, #dbeafe 0%, #ede9fe 50%, #fce7f3 100%)",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+            padding: 20,
+            animation: "fadeIn 0.3s ease-in"
+        }}>
+            <style>{`
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+            `}</style>
+            <div style={{
+                background: "white",
+                padding: "48px 40px",
+                borderRadius: 16,
+                boxShadow: "0 4px 24px rgba(0,0,0,0.1)",
+                width: "100%",
+                maxWidth: 400
+            }}>
+                <div style={{ textAlign: "center", marginBottom: 32 }}>
+                    <div style={{ fontSize: 48, marginBottom: 12 }}>✨</div>
+                    <h2 style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#111827" }}>Welcome Back</h2>
+                    <p style={{ color: "#6b7280", marginTop: 8, fontSize: 15 }}>Sign in to continue to your projects</p>
+                </div>
+
+                {error && (
+                    <div style={{ color: "#dc2626", background: "#fef2f2", padding: 12, borderRadius: 10, marginBottom: 20, fontSize: 14, textAlign: "center" }}>
+                        {error}
+                    </div>
+                )}
+
                 <form onSubmit={handleSubmit}>
-                    <div style={{ marginBottom: 16 }}>
-                        <label style={{ display: "block", marginBottom: 6, fontWeight: 500 }}>Username</label>
+                    <div style={{ marginBottom: 20 }}>
+                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>Username</label>
                         <input
                             type="text"
-                            style={{ width: "100%", padding: "10px 12px", borderRadius: 4, border: "1px solid #ced4da", fontSize: 16 }}
+                            style={{
+                                width: "100%",
+                                padding: "14px 16px",
+                                borderRadius: 10,
+                                border: "1px solid #e5e7eb",
+                                fontSize: 16,
+                                transition: "border-color 0.15s ease"
+                            }}
                             value={formData.username}
                             onChange={e => setFormData({ ...formData, username: e.target.value })}
+                            onFocus={e => e.target.style.borderColor = "#3b82f6"}
+                            onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                             required
                         />
                     </div>
-                    <div style={{ marginBottom: 24 }}>
-                        <label style={{ display: "block", marginBottom: 6, fontWeight: 500 }}>Password</label>
+                    <div style={{ marginBottom: 28 }}>
+                        <label style={{ display: "block", marginBottom: 8, fontWeight: 600, color: "#374151", fontSize: 14 }}>Password</label>
                         <input
                             type="password"
-                            style={{ width: "100%", padding: "10px 12px", borderRadius: 4, border: "1px solid #ced4da", fontSize: 16 }}
+                            style={{
+                                width: "100%",
+                                padding: "14px 16px",
+                                borderRadius: 10,
+                                border: "1px solid #e5e7eb",
+                                fontSize: 16
+                            }}
                             value={formData.password}
                             onChange={e => setFormData({ ...formData, password: e.target.value })}
+                            onFocus={e => e.target.style.borderColor = "#3b82f6"}
+                            onBlur={e => e.target.style.borderColor = "#e5e7eb"}
                             required
                         />
                     </div>
@@ -54,22 +103,23 @@ export default function LoginPage() {
                         disabled={loading}
                         style={{
                             width: "100%",
-                            padding: 12,
-                            background: "#0d6efd",
+                            padding: "16px",
+                            background: loading ? "#9ca3af" : "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
                             color: "white",
                             border: "none",
-                            borderRadius: 4,
+                            borderRadius: 12,
                             cursor: loading ? "wait" : "pointer",
-                            opacity: loading ? 0.7 : 1,
                             fontSize: 16,
-                            fontWeight: 600
+                            fontWeight: 600,
+                            boxShadow: loading ? "none" : "0 4px 14px rgba(59, 130, 246, 0.4)",
                         }}
                     >
-                        {loading ? "Signing In..." : "Sign In"}
+                        {loading ? "Signing In..." : "🚀 Sign In"}
                     </button>
                 </form>
-                <div style={{ marginTop: 24, textAlign: "center", fontSize: 14, color: "#6c757d" }}>
-                    Don't have an account? <Link to="/signup" style={{ color: "#0d6efd", textDecoration: "none" }}>Sign up</Link>
+
+                <div style={{ marginTop: 28, textAlign: "center", fontSize: 14, color: "#6b7280" }}>
+                    Don't have an account? <Link to="/signup" style={{ color: "#3b82f6", textDecoration: "none", fontWeight: 600 }}>Sign up</Link>
                 </div>
             </div>
         </div>

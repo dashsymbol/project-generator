@@ -3,7 +3,8 @@ import logging
 import threading
 from pathlib import Path
 from django.conf import settings
-from rest_framework import viewsets, status
+from django.conf import settings
+from rest_framework import viewsets, status, authentication, permissions
 from rest_framework.decorators import api_view, action
 from rest_framework.response import Response
 from .models import Project, Client
@@ -73,6 +74,12 @@ def run_background_generation(project_id, category, answers):
 class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Project.objects.all()
     serializer_class = ProjectSerializer
+    authentication_classes = (authentication.TokenAuthentication,)
+    permission_classes = (permissions.IsAuthenticated,)
+
+    def get_queryset(self):
+        """Retrieve projects for the authenticated user"""
+        return self.queryset.filter(owner=self.request.user)
 
     @action(detail=False, methods=['post'])
     def generate(self, request):
@@ -96,6 +103,7 @@ class ProjectViewSet(viewsets.ReadOnlyModelViewSet):
         # Create a pending project
         project = Project.objects.create(
             client=client,
+            owner=request.user,
             title="Generating Project...",
             category=category,
             objective="Project brief is being generated...",

@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../services/api";
+import { useAuth } from "../context/AuthContext";
 
 export default function LandingPage() {
+    const { logout, user } = useAuth();
     const [projects, setProjects] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -30,20 +32,29 @@ export default function LandingPage() {
             <div style={{ maxWidth: 800, margin: "0 auto", background: "#fff", padding: 40, borderRadius: 8, boxShadow: "0 2px 4px rgba(0,0,0,0.05)" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 30 }}>
                     <h1 style={{ margin: 0, fontSize: 28, color: "#212529" }}>Creative Projects</h1>
-                    <Link to="/create">
-                        <button style={{
-                            padding: "10px 20px",
-                            fontSize: 14,
-                            fontWeight: 500,
-                            cursor: "pointer",
-                            background: "#0d6efd",
-                            color: "white",
-                            border: "none",
-                            borderRadius: 4
-                        }}>
-                            + Create New
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{ color: "#6c757d", fontSize: 14 }}>Hello, {user?.username}</span>
+                        <button
+                            onClick={logout}
+                            style={{ padding: "8px 16px", background: "white", border: "1px solid #dee2e6", borderRadius: 4, cursor: "pointer", color: "#495057", fontSize: 14 }}
+                        >
+                            Logout
                         </button>
-                    </Link>
+                        <Link to="/create">
+                            <button style={{
+                                padding: "10px 20px",
+                                fontSize: 14,
+                                fontWeight: 500,
+                                cursor: "pointer",
+                                background: "#0d6efd",
+                                color: "white",
+                                border: "none",
+                                borderRadius: 4
+                            }}>
+                                + Create New
+                            </button>
+                        </Link>
+                    </div>
                 </div>
 
                 {loading ? (

@@ -9,7 +9,22 @@ const client = axios.create({
     },
 });
 
+// Add Token to requests if available
+client.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Token ${token}`;
+    }
+    return config;
+});
+
 export const api = {
+    // Auth
+    login: (username, password) => client.post('/auth/login/', { username, password }),
+    signup: (data) => client.post('/auth/signup/', data),
+    getMe: () => client.get('/auth/me/'),
+
+    // App
     checkHealth: () => client.get('/health'),
     getQuestionnaire: () => client.get('/config/questionnaire'),
     getProjects: () => client.get('/projects/'),

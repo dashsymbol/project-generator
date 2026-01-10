@@ -12,6 +12,7 @@ class ProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = '__all__'
+        read_only_fields = ('id', 'owner', 'created_at', 'status', 'approval_log')
 
 class UserSkillProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
